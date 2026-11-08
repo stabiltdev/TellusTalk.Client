@@ -19,6 +19,70 @@ public sealed class ValidationTests
     }
 
     [Fact]
+    public void A_missing_recipient_is_refused()
+    {
+        var build = () => new SmsMessage { To = ["+46701740605", null!], Text = "Hej" };
+
+        build.Should().Throw<ArgumentException>().WithMessage("To *");
+    }
+
+    [Fact]
+    public void Recipients_changed_after_the_message_is_built_leave_the_message_as_it_was()
+    {
+        List<string> to = ["+46701740605"];
+        var message = new SmsMessage { To = to, Text = "Hej" };
+
+        to[0] = "0701740605";
+
+        message.To.Should().Equal("+46701740605");
+    }
+
+    [Fact]
+    public void A_missing_report_address_is_refused()
+    {
+        var build = () => new SmsMessage { To = ["+46701740605"], Text = "Hej", ReportTo = [null!] };
+
+        build.Should().Throw<ArgumentException>().WithMessage("ReportTo *");
+    }
+
+    [Fact]
+    public void A_missing_reply_address_is_refused()
+    {
+        var build = () => new SmsMessage { To = ["+46701740605"], Text = "Hej", ReplyTo = [null!] };
+
+        build.Should().Throw<ArgumentException>().WithMessage("ReplyTo *");
+    }
+
+    [Fact]
+    public void Report_addresses_changed_after_the_message_is_built_leave_the_message_as_it_was()
+    {
+        List<ReportAddress> reportTo = [ReportAddress.Sms("+46701740699")];
+        var message = new SmsMessage { To = ["+46701740605"], Text = "Hej", ReportTo = reportTo };
+
+        reportTo.Add(null!);
+
+        message.ReportTo.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void A_report_header_without_a_value_is_refused()
+    {
+        var address = () => ReportAddress.Url(
+            new Uri("https://app.invalid/sms/reports"),
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["Authorization"] = null! });
+
+        address.Should().Throw<ArgumentException>().WithParameterName("headers");
+    }
+
+    [Fact]
+    public void A_validity_time_beyond_what_fits_in_whole_seconds_is_refused()
+    {
+        var build = () => new SmsMessage { To = ["+46701740605"], Text = "Hej", ValidityTime = TimeSpan.FromSeconds(int.MaxValue + 1d) };
+
+        build.Should().Throw<ArgumentOutOfRangeException>().WithMessage("ValidityTime *");
+    }
+
+    [Fact]
     public void A_message_without_recipients_is_refused()
     {
         var build = () => new SmsMessage { To = [], Text = "Hej" };

@@ -20,13 +20,16 @@ public sealed record SmsMessage
                 throw new ArgumentException("To needs at least one recipient.", nameof(value));
             }
 
-            var wrong = value.FirstOrDefault(number => !PhoneNumbers.IsPlusDigits(number));
-            if (wrong is not null)
+            foreach (var number in value)
             {
-                throw new ArgumentException($"To holds '{wrong}', which is not + followed by digits, such as +46701740605.", nameof(value));
+                if (!PhoneNumbers.IsPlusDigits(number))
+                {
+                    throw new ArgumentException($"To holds '{number}', which is not + followed by digits, such as +46701740605.", nameof(value));
+                }
             }
 
-            field = value;
+            // A copy, so a list the caller changes afterwards cannot take back what was checked.
+            field = [.. value];
         }
     }
 
@@ -50,22 +53,14 @@ public sealed record SmsMessage
     public IReadOnlyList<ReportAddress> ReportTo
     {
         get;
-        init
-        {
-            ArgumentNullException.ThrowIfNull(value);
-            field = value;
-        }
+        init => field = Addresses(value, nameof(ReportTo));
     } = [];
 
     /// <summary>Where TellusTalk sends the recipient's replies, for a <see cref="Sender.ReplyNumber"/> sender.</summary>
     public IReadOnlyList<ReportAddress> ReplyTo
     {
         get;
-        init
-        {
-            ArgumentNullException.ThrowIfNull(value);
-            field = value;
-        }
+        init => field = Addresses(value, nameof(ReplyTo));
     } = [];
 
     /// <summary>The most parts TellusTalk may split the text into, at least 1.</summary>
@@ -92,9 +87,12 @@ public sealed record SmsMessage
         get;
         init
         {
-            if (value < TimeSpan.FromSeconds(1))
+            if (value < TimeSpan.FromSeconds(1) || value > TimeSpan.FromSeconds(int.MaxValue))
             {
-                throw new ArgumentOutOfRangeException(nameof(value), value, "ValidityTime is at least a second; TellusTalk counts it in whole seconds.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    value,
+                    $"ValidityTime is from a second to {int.MaxValue} seconds; TellusTalk counts it in whole seconds.");
             }
 
             field = value;
@@ -130,7 +128,19 @@ public sealed record SmsMessage
                 throw new ArgumentException("Echo holds no JSON; a default JsonElement cannot be sent.", nameof(value));
             }
 
-            field = value;
+            // A clone, which outlives the JsonDocument the element may have come from.
+            field = value?.Clone();
         }
+    }
+
+    private static ReportAddress[] Addresses(IReadOnlyList<ReportAddress> value, string property)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Contains(null!))
+        {
+            throw new ArgumentException($"{property} holds a null address.", nameof(value));
+        }
+
+        return [.. value];
     }
 }

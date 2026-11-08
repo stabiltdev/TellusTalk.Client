@@ -64,7 +64,8 @@ send the SMS twice; an app that adds a resilience handler should leave `POST` ou
 | `Echo` | `echo` | Any JSON; TellusTalk carries it back in the delivery report |
 
 A rule that is broken throws `ArgumentException` where the value is set. A refusal from TellusTalk, or an answer that is
-not a send's answer, throws `TellusTalkException` with TellusTalk's status code and text.
+not a send's answer, throws `TellusTalkException` with TellusTalk's status code and text. Its `Accepted` says TellusTalk
+answered with success even so: the SMS may go out, and the message must not be sent again.
 
 The client sends SMS only. TellusTalk's other channels, `html` and `attachments` on an SMS, binary SMS with `sms_udh`,
 and the deprecated `sms_format` and `sms_header` have no properties.
@@ -84,7 +85,9 @@ tests; give the client its address instead of TellusTalk's:
 }
 ```
 
-From an Aspire AppHost, `Stabilt.TellusTalk.Emulator.Aspire`'s `WithReference` sets `TellusTalk__BaseUrl` for the app.
+The emulator takes any user name and password, but the client still needs both to start. From an Aspire AppHost,
+`Stabilt.TellusTalk.Emulator.Aspire`'s `WithReference` sets `TellusTalk__BaseUrl` for the app; the credentials still
+come from the app's own configuration.
 
 ## Building
 

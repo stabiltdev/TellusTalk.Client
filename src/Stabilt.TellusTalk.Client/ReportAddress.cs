@@ -22,6 +22,10 @@ public sealed class ReportAddress
     {
         var target = HttpUrl(url);
         ArgumentNullException.ThrowIfNull(headers);
+        if (headers.Values.Any(value => value is null))
+        {
+            throw new ArgumentException("Each header needs a value; TellusTalk drops an address whose header has none.", nameof(headers));
+        }
 
         // TellusTalk takes an address's settings as JSON between its scheme and its "://".
         var settings = JsonSerializer.Serialize(new { headers }, Json.Options);

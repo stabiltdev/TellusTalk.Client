@@ -208,6 +208,19 @@ public sealed class SendingTests
     }
 
     [Fact]
+    public async Task An_echo_outlives_the_document_it_came_from()
+    {
+        using var handler = new RecordingHandler();
+        var document = JsonDocument.Parse("""{"appointment":4711}""");
+        var message = Minimal with { Echo = document.RootElement };
+        document.Dispose();
+
+        await SendAsync(handler, message);
+
+        Field(handler, "echo").Should().Be("""{"appointment":4711}""");
+    }
+
+    [Fact]
     public async Task The_answer_is_read_into_the_send_result()
     {
         using var handler = new RecordingHandler();
@@ -238,11 +251,12 @@ public sealed class SendingTests
         refusal.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         refusal.ResponseText.Should().Be("The server could not verify that you are authorized to access the URL requested.");
         refusal.Message.Should().Contain("401").And.Contain("could not verify");
+        refusal.Accepted.Should().BeFalse();
     }
 
     [Fact]
     [SuppressMessage("Reliability", "CA2025:Ensure tasks using IDisposable instances complete before the instances are disposed", Justification = "The assertion awaits the send before the handler is disposed.")]
-    public async Task An_answer_that_is_not_a_send_answer_throws_with_its_text()
+    public async Task A_success_that_is_not_a_send_answer_throws_saying_tellustalk_took_the_message()
     {
         using var handler = new RecordingHandler { ContentType = "text/html", Answer = "<html>maintenance</html>" };
 
@@ -251,6 +265,7 @@ public sealed class SendingTests
         var refusal = (await send.Should().ThrowAsync<TellusTalkException>()).Which;
         refusal.StatusCode.Should().Be(HttpStatusCode.OK);
         refusal.ResponseText.Should().Be("<html>maintenance</html>");
+        refusal.Accepted.Should().BeTrue();
     }
 
     private static async Task<SendResult> SendAsync(RecordingHandler handler, SmsMessage message)

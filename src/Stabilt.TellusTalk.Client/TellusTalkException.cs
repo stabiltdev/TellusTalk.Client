@@ -23,6 +23,12 @@ public sealed class TellusTalkException : Exception
     /// <summary>TellusTalk's answer as it came.</summary>
     public string ResponseText { get; }
 
+    /// <summary>
+    /// Whether TellusTalk answered with success: it took the message although the client could not read the answer, so
+    /// the SMS may go out and the message must not be sent again.
+    /// </summary>
+    public bool Accepted => (int)StatusCode is >= 200 and <= 299;
+
     private static string Describe(HttpStatusCode statusCode, string responseText, bool unreadable)
     {
         var shown = responseText.Length <= ShownLength ? responseText : responseText[..ShownLength] + "…";
