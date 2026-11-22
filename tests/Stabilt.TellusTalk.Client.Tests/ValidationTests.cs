@@ -48,9 +48,20 @@ public sealed class ValidationTests
     [Fact]
     public void A_missing_reply_address_is_refused()
     {
-        var build = () => new SmsMessage { To = ["+46701740605"], Text = "Hej", ReplyTo = [null!] };
+        var sender = () => Sender.ReplyNumber(replyTo: [null!]);
 
-        build.Should().Throw<ArgumentException>().WithMessage("ReplyTo *");
+        sender.Should().Throw<ArgumentException>().WithParameterName("replyTo");
+    }
+
+    [Fact]
+    public void Reply_addresses_changed_after_the_sender_is_built_leave_the_sender_as_it_was()
+    {
+        List<ReportAddress> replyTo = [ReportAddress.Sms("+46701740699")];
+        var sender = Sender.ReplyNumber(replyTo);
+
+        replyTo.Add(null!);
+
+        sender.ReplyTo.Should().ContainSingle();
     }
 
     [Fact]

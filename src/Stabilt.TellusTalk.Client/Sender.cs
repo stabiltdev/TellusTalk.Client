@@ -13,12 +13,14 @@ public sealed class Sender
         string? originatorText = null,
         string? originatorNumber = null,
         string? subjectText = null,
+        IReadOnlyList<ReportAddress>? replyTo = null,
         bool? singleThread = null)
     {
         Source = source;
         OriginatorText = originatorText;
         OriginatorNumber = originatorNumber;
         SubjectText = subjectText;
+        ReplyTo = replyTo ?? [];
         SingleThread = singleThread;
     }
 
@@ -29,6 +31,8 @@ public sealed class Sender
     internal string? OriginatorNumber { get; }
 
     internal string? SubjectText { get; }
+
+    internal IReadOnlyList<ReportAddress> ReplyTo { get; }
 
     internal bool? SingleThread { get; }
 
@@ -63,13 +67,25 @@ public sealed class Sender
         return new Sender("number", originatorNumber: number);
     }
 
-    /// <summary>A number from TellusTalk's pool, so the recipient can reply; replies go to the message's <c>ReplyTo</c>.</summary>
+    /// <summary>A number from TellusTalk's pool, so the recipient can reply.</summary>
+    /// <param name="replyTo">Where TellusTalk sends the recipient's replies.</param>
     /// <param name="samePerRecipient">
     /// Whether a recipient gets the number earlier messages to them came from, rather than a new one, which keeps each
     /// conversation's replies apart.
     /// </param>
-    public static Sender ReplyNumber(bool samePerRecipient = false) =>
-        new("replysms", singleThread: samePerRecipient ? true : null);
+    public static Sender ReplyNumber(IReadOnlyList<ReportAddress>? replyTo = null, bool samePerRecipient = false)
+    {
+        if (replyTo?.Contains(null!) == true)
+        {
+            throw new ArgumentException("replyTo holds a null address.", nameof(replyTo));
+        }
+
+        // A copy, so a list the caller changes afterwards cannot take back what was checked.
+        return new Sender(
+            "replysms",
+            replyTo: replyTo is null ? null : [.. replyTo],
+            singleThread: samePerRecipient ? true : null);
+    }
 
     private static void RequireShownName(string name, [CallerArgumentExpression(nameof(name))] string? parameter = null)
     {

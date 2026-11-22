@@ -75,8 +75,9 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
             {
                 To = ["+46701740612"],
                 Text = "Svara JA för att bekräfta.",
-                Sender = Sender.ReplyNumber(samePerRecipient: true),
-                ReplyTo = [ReportAddress.Url(new Uri("https://app.invalid/sms/replies"))],
+                Sender = Sender.ReplyNumber(
+                    replyTo: [ReportAddress.Url(new Uri("https://app.invalid/sms/replies"))],
+                    samePerRecipient: true),
             },
             TestContext.Current.CancellationToken);
 

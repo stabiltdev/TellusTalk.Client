@@ -35,7 +35,7 @@ internal sealed record SendRequestBody(
         message.Sender?.SingleThread,
         message.ScheduledSendTime?.ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture),
         Addresses(message.ReportTo),
-        Addresses(message.ReplyTo),
+        Addresses(message.Sender?.ReplyTo ?? []),
         message.MaxParts,
         message.Flash ? true : null,
         (int?)message.ValidityTime?.TotalSeconds,

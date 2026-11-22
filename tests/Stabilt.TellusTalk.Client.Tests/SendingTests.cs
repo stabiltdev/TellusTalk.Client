@@ -170,8 +170,7 @@ public sealed class SendingTests
 
         await SendAsync(handler, Minimal with
         {
-            Sender = Sender.ReplyNumber(),
-            ReplyTo = [ReportAddress.Url(new Uri("https://app.invalid/sms/replies"))],
+            Sender = Sender.ReplyNumber(replyTo: [ReportAddress.Url(new Uri("https://app.invalid/sms/replies"))]),
         });
 
         Field(handler, "reply_to").Should().Be("""["https://app.invalid/sms/replies"]""");

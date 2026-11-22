@@ -56,13 +56,6 @@ public sealed record SmsMessage
         init => field = Addresses(value, nameof(ReportTo));
     } = [];
 
-    /// <summary>Where TellusTalk sends the recipient's replies, for a <see cref="Sender.ReplyNumber"/> sender.</summary>
-    public IReadOnlyList<ReportAddress> ReplyTo
-    {
-        get;
-        init => field = Addresses(value, nameof(ReplyTo));
-    } = [];
-
     /// <summary>The most parts TellusTalk may split the text into, at least 1.</summary>
     public int? MaxParts
     {
