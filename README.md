@@ -66,7 +66,7 @@ send the SMS twice; an app that adds a resilience handler should leave `POST` ou
 |---|---|---|
 | `To` | `to` | One or more numbers, `+` followed by digits; each is sent as `sms:<number>` |
 | `Text` | `text` | |
-| `Sender` | `sms_originator_source` and its value | `Sender.Name("Clinic")`, at most 11 characters; `Sender.Number("+46…")`; `Sender.ReplyNumber()`, a number of TellusTalk's that takes replies. Left out, the account's own sender |
+| `Sender` | `sms_originator_source` and its value | `Sender.Name("Clinic")`, at most 11 characters; `Sender.Subject("Clinic")`, a name sent as the `subject`, which sets the message apart from TellusTalk's duplicates and starts its report's text; `Sender.Number("+46…")`; `Sender.ReplyNumber()`, a number of TellusTalk's that takes replies. Left out, the account's own sender |
 | `ScheduledSendTime` | `scheduled_send_time` | Sent with its offset, so it never depends on how TellusTalk reads a time without one |
 | `ReportTo` | `report_to` | `ReportAddress.Url(url)`, optionally with headers for the report request; `ReportAddress.Email(…)`; `ReportAddress.Sms(…)` |
 | `ReplyTo` | `reply_to` | Where replies to a `Sender.ReplyNumber()` go, in the same forms |

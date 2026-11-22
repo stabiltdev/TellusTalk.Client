@@ -83,6 +83,18 @@ public sealed class SendingTests
     }
 
     [Fact]
+    public async Task A_subject_sender_is_sent_as_subject()
+    {
+        using var handler = new RecordingHandler();
+
+        await SendAsync(handler, Minimal with { Sender = Sender.Subject("Clinic") });
+
+        handler.Body.Should().Contain("""
+            "sms_originator_source":"subject","subject":"Clinic"
+            """);
+    }
+
+    [Fact]
     public async Task A_number_sender_is_sent_as_number()
     {
         using var handler = new RecordingHandler();

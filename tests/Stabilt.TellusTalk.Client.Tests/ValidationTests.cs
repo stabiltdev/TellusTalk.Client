@@ -114,6 +114,30 @@ public sealed class ValidationTests
         name.Should().Throw<ArgumentException>().WithParameterName("name");
     }
 
+    [Fact]
+    public void A_sender_subject_over_eleven_characters_is_refused()
+    {
+        var subject = () => Sender.Subject("Vårdcentralen");
+
+        subject.Should().Throw<ArgumentException>().WithParameterName("subject");
+    }
+
+    [Fact]
+    public void A_sender_subject_of_eleven_characters_is_taken()
+    {
+        var subject = () => Sender.Subject("Vårdcentral");
+
+        subject.Should().NotThrow();
+    }
+
+    [Fact]
+    public void An_empty_sender_subject_is_refused()
+    {
+        var subject = () => Sender.Subject(" ");
+
+        subject.Should().Throw<ArgumentException>().WithParameterName("subject");
+    }
+
     [Theory]
     [InlineData("0701740699")]
     [InlineData("+46 70 174 06 99")]

@@ -41,6 +41,20 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
     }
 
     [Fact]
+    public async Task A_subject_sender_reaches_the_emulator_without_warnings()
+    {
+        await emulator.Client.SendAsync(
+            new SmsMessage { To = ["+46701740616"], Text = "Din tid är bekräftad.", Sender = Sender.Subject("Clinic") },
+            TestContext.Current.CancellationToken);
+
+        var message = await SingleMessageAsync("+46701740616");
+
+        message.Warnings.Should().BeEmpty();
+        message.Sender!.Shown.Should().Be("Clinic");
+        message.Sender.Source.Should().Be("subject");
+    }
+
+    [Fact]
     public async Task A_number_sender_reaches_the_emulator_without_warnings()
     {
         await emulator.Client.SendAsync(
