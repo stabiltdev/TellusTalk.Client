@@ -235,6 +235,20 @@ public sealed class SendingTests
     }
 
     [Fact]
+    public async Task An_answer_to_several_recipients_is_read_without_a_log_id()
+    {
+        using var handler = new RecordingHandler
+        {
+            Answer = """{"job_id": "5d656a5cdafd11f1ba39a2551b38e481", "job_uuid": "5d656a5cdafd11f1ba39a2551b38e481", "job_size": 2}""",
+        };
+
+        var result = await SendAsync(handler, Minimal with { To = ["+46701740605", "+46701740606"] });
+
+        result.LogUuid.Should().BeNull();
+        result.JobSize.Should().Be(2);
+    }
+
+    [Fact]
     [SuppressMessage("Reliability", "CA2025:Ensure tasks using IDisposable instances complete before the instances are disposed", Justification = "The assertion awaits the send before the handler is disposed.")]
     public async Task A_refusal_throws_with_tellustalks_status_and_text()
     {
