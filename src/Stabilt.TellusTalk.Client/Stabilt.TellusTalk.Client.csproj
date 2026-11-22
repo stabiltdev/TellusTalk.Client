@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- net8.0 and the 8.0 Microsoft.Extensions packages, so an app on any .NET from 8 on can take it without being made
-       to upgrade. -->
+  <!-- net10.0, the oldest .NET still supported, and the first 10.0 Microsoft.Extensions packages, so an app on any
+       supported .NET can take it without being made to upgrade. -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <Description>A typed client for TellusTalk's K8 send API: sends SMS with IHttpClientFactory, configured from the TellusTalk section.</Description>
     <Authors>Stabilt AB</Authors>

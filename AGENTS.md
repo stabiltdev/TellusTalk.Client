@@ -1,7 +1,7 @@
 # TellusTalk Client
 
 A typed .NET client for TellusTalk's K8 send API: an app registers it with `AddTellusTalkClient`, builds an
-`SmsMessage`, and sends it. .NET 8 and later, `IHttpClientFactory`, one NuGet package.
+`SmsMessage`, and sends it. .NET 10 and later, `IHttpClientFactory`, one NuGet package.
 
 ## Read first
 
@@ -43,7 +43,8 @@ A typed .NET client for TellusTalk's K8 send API: an app registers it with `AddT
 ## Traps
 
 - Debug builds hide analyzer errors. Build `-c Release` before pushing.
-- The package targets `net8.0` and the 8.0 Microsoft.Extensions packages; an API newer than .NET 8 does not compile.
+- The package targets `net10.0` and the 10.0.0 Microsoft.Extensions packages; an API newer than .NET 10 does not
+  compile, and raising a package's version raises it for every app.
 - `JsonContent` streams its body chunked; the client serialises the body first so the request carries its length.
 - The emulator's image is the version of `Stabilt.TellusTalk.Emulator.Testcontainers` in `Directory.Packages.props`;
   raise it together with `Stabilt.TellusTalk.Emulator.Client`, as a change of its own.
