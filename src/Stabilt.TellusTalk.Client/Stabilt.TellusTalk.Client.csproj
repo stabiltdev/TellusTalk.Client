@@ -5,7 +5,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>true</IsPackable>
-    <Description>A typed client for TellusTalk's K8 send API: sends SMS with IHttpClientFactory, configured from the TellusTalk section.</Description>
+    <Description>A typed client for TellusTalk's K8 send API: sends SMS with IHttpClientFactory, configured from the app's configuration or in code.</Description>
     <Authors>Stabilt AB</Authors>
     <Company>Stabilt AB</Company>
     <PackageTags>tellustalk;sms;client;httpclient</PackageTags>
