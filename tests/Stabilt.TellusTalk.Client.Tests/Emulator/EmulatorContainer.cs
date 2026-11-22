@@ -49,8 +49,7 @@ public sealed class EmulatorContainer : IAsyncLifetime
             .Build();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(configuration);
-        services.AddTellusTalkClient();
+        services.AddTellusTalkClient(configuration);
         _services = services.BuildServiceProvider();
 
         Api = new HttpClient { BaseAddress = BaseUrl };

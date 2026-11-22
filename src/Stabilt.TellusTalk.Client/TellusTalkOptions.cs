@@ -2,11 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Stabilt.TellusTalk.Client;
 
-/// <summary>Where TellusTalk is and the account to send as, read from the <c>TellusTalk</c> section.</summary>
+/// <summary>Where TellusTalk is and the account to send as.</summary>
 public sealed class TellusTalkOptions : IValidatableObject
 {
-    public const string SectionName = "TellusTalk";
-
     /// <summary>TellusTalk's K8 API, or an emulator's address in its place.</summary>
     [Required]
     public Uri BaseUrl { get; set; } = new("https://k8api.tellustalk.com/");

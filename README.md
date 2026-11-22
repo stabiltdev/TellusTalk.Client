@@ -2,8 +2,8 @@
 
 A typed .NET client for [TellusTalk](https://tellustalk.com/)'s
 [K8 send API](https://k8api.tellustalk.com/openapi_docs/redoc.html). It sends SMS through `IHttpClientFactory`,
-configured from the `TellusTalk` section, and refuses what TellusTalk's specification forbids before anything is sent.
-Not affiliated with TellusTalk.
+configured from the app's configuration or in code, and refuses what TellusTalk's specification forbids before anything
+is sent. Not affiliated with TellusTalk.
 
 ```shell
 dotnet add package Stabilt.TellusTalk.Client
@@ -12,7 +12,7 @@ dotnet add package Stabilt.TellusTalk.Client
 ## Sending
 
 ```csharp
-builder.Services.AddTellusTalkClient();
+builder.Services.AddTellusTalkClient(builder.Configuration);
 ```
 
 ```json
@@ -40,8 +40,22 @@ public sealed class Reminders(TellusTalkClient tellusTalk)
 ```
 
 `BaseUrl` defaults to `https://k8api.tellustalk.com/`. Missing credentials, or a `BaseUrl` that is not an http(s) URL,
-fail when the app starts. `AddTellusTalkClient` also takes an `Action<TellusTalkOptions>`, which runs after the section
-is read, and returns the client's `IHttpClientBuilder` for handlers of the app's own.
+fail when the app starts, except while build-time OpenAPI generation runs the app without its secrets; they fail then
+when a client is created. A change to the section reaches the next client created, so a rotated password needs no
+restart.
+
+`AddTellusTalkClient` reads its settings from configuration or takes them from code:
+
+| Call | Reads |
+|---|---|
+| `AddTellusTalkClient(builder.Configuration)` | The `TellusTalk` section |
+| `AddTellusTalkClient(builder.Configuration, "Sms")` | A section of the app's own name |
+| `AddTellusTalkClient(builder.Configuration.GetSection("Sms"))` | The section passed |
+| `AddTellusTalkClient(options => …)` | Nothing; the code sets every option |
+
+A section passed as an `IConfiguration` rather than an `IConfigurationSection` is searched for `TellusTalk` beneath it.
+An app that reads a section and sets an option in code as well adds `services.Configure<TellusTalkOptions>(…)` after
+the call. Each form returns the client's `IHttpClientBuilder`, for handlers of the app's own.
 
 The client adds no retries. A send that failed in transit may still have reached TellusTalk, and sending it again would
 send the SMS twice; an app that adds a resilience handler should leave `POST` out of its retries.
@@ -86,8 +100,9 @@ tests; give the client its address instead of TellusTalk's:
 ```
 
 The emulator takes any user name and password, but the client still needs both to start. From an Aspire AppHost,
-`Stabilt.TellusTalk.Emulator.Aspire`'s `WithReference` sets `TellusTalk__BaseUrl` for the app; the credentials still
-come from the app's own configuration.
+`Stabilt.TellusTalk.Emulator.Aspire`'s `WithReference` sets `TellusTalk__BaseUrl` for the app, or the setting its second
+argument names, such as `Sms__BaseUrl` for a section of the app's own name; the credentials still come from the app's
+own configuration.
 
 ## Building
 

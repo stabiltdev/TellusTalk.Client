@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Stabilt.TellusTalk.Client.Tests.Support;
@@ -7,6 +8,13 @@ namespace Stabilt.TellusTalk.Client.Tests;
 public sealed class RegistrationTests
 {
     private static readonly SmsMessage Message = new() { To = ["+46701740605"], Text = "Hej" };
+
+    private static readonly IReadOnlyDictionary<string, string?> SmsSection = new Dictionary<string, string?>(StringComparer.Ordinal)
+    {
+        ["Sms:BaseUrl"] = "http://localhost:8080",
+        ["Sms:UserName"] = "tester",
+        ["Sms:Password"] = "secret",
+    };
 
     [Fact]
     public async Task The_base_url_comes_from_the_TellusTalk_section()
@@ -31,21 +39,62 @@ public sealed class RegistrationTests
     }
 
     [Fact]
-    public async Task Code_sets_what_configuration_leaves_out()
+    public async Task A_section_of_the_apps_own_name_is_read_under_the_configuration()
+    {
+        var configuration = Clients.Configuration(SmsSection);
+
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, services => services.AddTellusTalkClient(configuration, "Sms"));
+
+        await services.GetRequiredService<TellusTalkClient>().SendAsync(Message, TestContext.Current.CancellationToken);
+
+        handler.Request!.RequestUri.Should().Be(new Uri("http://localhost:8080/send/v1"));
+    }
+
+    [Fact]
+    public async Task A_section_passed_alone_is_read_as_it_is()
+    {
+        var configuration = Clients.Configuration(SmsSection);
+
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, services => services.AddTellusTalkClient(configuration.GetSection("Sms")));
+
+        await services.GetRequiredService<TellusTalkClient>().SendAsync(Message, TestContext.Current.CancellationToken);
+
+        handler.Request!.RequestUri.Should().Be(new Uri("http://localhost:8080/send/v1"));
+    }
+
+    [Fact]
+    public async Task Code_alone_configures_the_client()
     {
         using var handler = new RecordingHandler();
         await using var services = Clients.Services(
             handler,
-            new Dictionary<string, string?>(StringComparer.Ordinal),
-            options =>
+            services => services.AddTellusTalkClient(options =>
             {
                 options.UserName = "coded";
                 options.Password = "secret";
-            });
+            }));
 
         await services.GetRequiredService<TellusTalkClient>().SendAsync(Message, TestContext.Current.CancellationToken);
 
         handler.Request!.Headers.Authorization!.Parameter.Should().Be(Convert.ToBase64String("coded:secret"u8));
+    }
+
+    [Fact]
+    public async Task A_password_changed_in_configuration_reaches_the_next_client()
+    {
+        var configuration = Clients.Configuration();
+
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, services => services.AddTellusTalkClient(configuration));
+        await services.GetRequiredService<TellusTalkClient>().SendAsync(Message, TestContext.Current.CancellationToken);
+
+        configuration["TellusTalk:Password"] = "rotated";
+        configuration.Reload();
+        await services.GetRequiredService<TellusTalkClient>().SendAsync(Message, TestContext.Current.CancellationToken);
+
+        handler.Request!.Headers.Authorization!.Parameter.Should().Be(Convert.ToBase64String("tester:rotated"u8));
     }
 
     [Theory]
