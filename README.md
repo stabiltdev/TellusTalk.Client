@@ -81,6 +81,11 @@ A rule that is broken throws `ArgumentException` where the value is set. A refus
 not a send's answer, throws `TellusTalkException` with TellusTalk's status code and text. Its `Accepted` says TellusTalk
 answered with success even so: the SMS may go out, and the message must not be sent again.
 
+`SendResult` holds TellusTalk's ids for the send, which its delivery reports carry too, `LogUuid` only for a send to
+one recipient. `InvalidRecipients`, `InvalidReportTo` and `InvalidReplyTo` list the addresses TellusTalk could not use,
+each with TellusTalk's reason; the rest of the message is sent all the same, so they throw nothing. The client refuses
+what TellusTalk was seen to list before it is sent, so the lists hold what TellusTalk lists besides.
+
 The client sends SMS only. TellusTalk's other channels, `html` and `attachments` on an SMS, binary SMS with `sms_udh`,
 and the deprecated `sms_format` and `sms_header` have no properties.
 

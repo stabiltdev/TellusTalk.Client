@@ -249,6 +249,40 @@ public sealed class SendingTests
     }
 
     [Fact]
+    public async Task The_addresses_tellustalk_could_not_use_are_read_with_their_errors()
+    {
+        using var handler = new RecordingHandler
+        {
+            Answer = """
+                {"job_id": "5d656a5cdafd11f1ba39a2551b38e481", "job_uuid": "5d656a5cdafd11f1ba39a2551b38e481",
+                 "invalid_report_to": [{"address": "reports", "error": "Unknown Address Type"}],
+                 "invalid_reply_to": [{"address": "replies", "error": "Unknown Address Type"}],
+                 "log_uuid": "5d656a5cdafd11f1ba39a2551b38e481",
+                 "invalid_recipients": [{"address": "sms:+4670174062X", "error": "Number Not Numeric"}],
+                 "job_size": 1}
+                """,
+        };
+
+        var result = await SendAsync(handler, Minimal);
+
+        result.InvalidRecipients.Should().Equal(new InvalidAddress("sms:+4670174062X", "Number Not Numeric"));
+        result.InvalidReportTo.Should().Equal(new InvalidAddress("reports", "Unknown Address Type"));
+        result.InvalidReplyTo.Should().Equal(new InvalidAddress("replies", "Unknown Address Type"));
+    }
+
+    [Fact]
+    public async Task An_answer_that_lists_no_addresses_is_read_as_empty_lists()
+    {
+        using var handler = new RecordingHandler();
+
+        var result = await SendAsync(handler, Minimal);
+
+        result.InvalidRecipients.Should().BeEmpty();
+        result.InvalidReportTo.Should().BeEmpty();
+        result.InvalidReplyTo.Should().BeEmpty();
+    }
+
+    [Fact]
     [SuppressMessage("Reliability", "CA2025:Ensure tasks using IDisposable instances complete before the instances are disposed", Justification = "The assertion awaits the send before the handler is disposed.")]
     public async Task A_refusal_throws_with_tellustalks_status_and_text()
     {
