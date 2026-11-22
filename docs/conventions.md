@@ -15,15 +15,15 @@ disagree, the code is right and the page is a bug.
 - `AddTellusTalkClient` is the exception for namespaces: it lives in `Microsoft.Extensions.DependencyInjection`, as the
   Microsoft.Extensions registrations do, so an app finds it without a `using`.
 - A property of the message is named after TellusTalk's field without its `sms_` prefix, such as `MaxParts` for
-  `sms_max_parts`, unless one type stands for several fields, as `Sender` does for `sms_originator_*`.
+  `sms_max_parts`, unless one type stands for several fields, as `SmsSender` does for `sms_originator_*` in `Sender`.
 
 ## The message
 
 **Source:** [ADR 20261108-refuse-what-tellustalks-specification-forbids](decisions/20261108-refuse-what-tellustalks-specification-forbids.md);
-code: `src/Stabilt.TellusTalk.Client/SmsMessage.cs`, `Sender.cs`, `ReportAddress.cs`
+code: `src/Stabilt.TellusTalk.Client/SmsMessage.cs`, `SmsSender.cs`, `ReportAddress.cs`
 
 - A rule of the specification is checked where the value is set: in the property's `init`, or in the factory that
-  builds a `Sender` or a `ReportAddress`. A message that exists is one that can be sent.
+  builds an `SmsSender` or a `ReportAddress`. A message that exists is one that can be sent.
 - A broken rule throws `ArgumentException` or `ArgumentOutOfRangeException`. From an `init`, the parameter is `value`,
   as in the base class library, and the message opens with the property's name: `MaxParts is at least 1.`
 - `SendRequestBody` alone knows TellusTalk's field names and forms; a field the message leaves out is null there and is

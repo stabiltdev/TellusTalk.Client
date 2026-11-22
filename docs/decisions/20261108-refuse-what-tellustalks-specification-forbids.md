@@ -22,7 +22,7 @@ each such value as a warning on the message.
 ## Decision Outcome
 
 **A value the specification forbids is refused with an `ArgumentException` where it is set, in an `SmsMessage`
-property's `init` or in the factory of a `Sender` or a `ReportAddress`, so a message that exists can be sent as
+property's `init` or in the factory of an `SmsSender` or a `ReportAddress`, so a message that exists can be sent as
 meant.** Recipients and numbers are `+` followed by digits, a sender name is at most 11 characters, a report address is
 an http(s) URL, an e-mail address or a number, `MaxParts` is at least 1 and a billing id is letters and digits. Fields
 whose wrong values the type system already excludes, such as the sender's source or the character set, are enums or

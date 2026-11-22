@@ -75,7 +75,7 @@ public sealed class SendingTests
     {
         using var handler = new RecordingHandler();
 
-        await SendAsync(handler, Minimal with { Sender = Sender.Name("Clinic") });
+        await SendAsync(handler, Minimal with { Sender = SmsSender.Name("Clinic") });
 
         handler.Body.Should().Contain("""
             "sms_originator_source":"text","sms_originator_text":"Clinic"
@@ -87,7 +87,7 @@ public sealed class SendingTests
     {
         using var handler = new RecordingHandler();
 
-        await SendAsync(handler, Minimal with { Sender = Sender.Subject("Clinic") });
+        await SendAsync(handler, Minimal with { Sender = SmsSender.Subject("Clinic") });
 
         handler.Body.Should().Contain("""
             "sms_originator_source":"subject","subject":"Clinic"
@@ -99,7 +99,7 @@ public sealed class SendingTests
     {
         using var handler = new RecordingHandler();
 
-        await SendAsync(handler, Minimal with { Sender = Sender.Number("+46701740699") });
+        await SendAsync(handler, Minimal with { Sender = SmsSender.Number("+46701740699") });
 
         handler.Body.Should().Contain("""
             "sms_originator_source":"number","sms_originator_number":"+46701740699"
@@ -111,7 +111,7 @@ public sealed class SendingTests
     {
         using var handler = new RecordingHandler();
 
-        await SendAsync(handler, Minimal with { Sender = Sender.ReplyNumber() });
+        await SendAsync(handler, Minimal with { Sender = SmsSender.ReplyNumber() });
 
         handler.Body.Should().Contain("""
             "sms_originator_source":"replysms"
@@ -124,7 +124,7 @@ public sealed class SendingTests
     {
         using var handler = new RecordingHandler();
 
-        await SendAsync(handler, Minimal with { Sender = Sender.ReplyNumber(samePerRecipient: true) });
+        await SendAsync(handler, Minimal with { Sender = SmsSender.ReplyNumber(samePerRecipient: true) });
 
         handler.Body.Should().Contain("""
             "sms_originator_source":"replysms","sms_single_thread":true
@@ -170,7 +170,7 @@ public sealed class SendingTests
 
         await SendAsync(handler, Minimal with
         {
-            Sender = Sender.ReplyNumber(replyTo: [ReportAddress.Url(new Uri("https://app.invalid/sms/replies"))]),
+            Sender = SmsSender.ReplyNumber(replyTo: [ReportAddress.Url(new Uri("https://app.invalid/sms/replies"))]),
         });
 
         Field(handler, "reply_to").Should().Be("""["https://app.invalid/sms/replies"]""");

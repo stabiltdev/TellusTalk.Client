@@ -44,7 +44,7 @@ public sealed record SmsMessage
     }
 
     /// <summary>The sender the phone shows, or <see langword="null"/> for the one the TellusTalk account is configured with.</summary>
-    public Sender? Sender { get; init; }
+    public SmsSender? Sender { get; init; }
 
     /// <summary>When TellusTalk sends the message, or <see langword="null"/> for at once. It is sent with its offset.</summary>
     public DateTimeOffset? ScheduledSendTime { get; init; }

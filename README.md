@@ -32,7 +32,7 @@ public sealed class Reminders(TellusTalkClient tellusTalk)
         {
             To = ["+46701740605"],
             Text = "Your appointment is tomorrow at 08:30.",
-            Sender = Sender.Name("Clinic"),
+            Sender = SmsSender.Name("Clinic"),
             ReportTo = [ReportAddress.Url(new Uri("https://app.example/sms/reports"))],
         },
         cancellationToken);
@@ -66,7 +66,7 @@ send the SMS twice; an app that adds a resilience handler should leave `POST` ou
 |---|---|---|
 | `To` | `to` | One or more numbers, `+` followed by digits; each is sent as `sms:<number>` |
 | `Text` | `text` | |
-| `Sender` | `sms_originator_source` and the fields that go with it | `Sender.Name("Clinic")`, at most 11 characters; `Sender.Subject("Clinic")`, a name sent as the `subject`, which sets the message apart from TellusTalk's duplicates and starts its report's text; `Sender.Number("+46…")`; `Sender.ReplyNumber(replyTo)`, a number of TellusTalk's that takes replies, which go to `replyTo` (`reply_to`) in `ReportTo`'s forms. Left out, the account's own sender |
+| `Sender` | `sms_originator_source` and the fields that go with it | `SmsSender.Name("Clinic")`, at most 11 characters; `SmsSender.Subject("Clinic")`, a name sent as the `subject`, which sets the message apart from TellusTalk's duplicates and starts its report's text; `SmsSender.Number("+46…")`; `SmsSender.ReplyNumber(replyTo)`, a number of TellusTalk's that takes replies, which go to `replyTo` (`reply_to`) in `ReportTo`'s forms. Left out, the account's own sender |
 | `ScheduledSendTime` | `scheduled_send_time` | Sent with its offset, so it never depends on how TellusTalk reads a time without one |
 | `ReportTo` | `report_to` | `ReportAddress.Url(url)`, optionally with headers for the report request; `ReportAddress.Email(…)`; `ReportAddress.Sms(…)` |
 | `MaxParts` | `sms_max_parts` | At least 1 |

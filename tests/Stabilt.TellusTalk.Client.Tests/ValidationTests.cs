@@ -48,7 +48,7 @@ public sealed class ValidationTests
     [Fact]
     public void A_missing_reply_address_is_refused()
     {
-        var sender = () => Sender.ReplyNumber(replyTo: [null!]);
+        var sender = () => SmsSender.ReplyNumber(replyTo: [null!]);
 
         sender.Should().Throw<ArgumentException>().WithParameterName("replyTo");
     }
@@ -57,7 +57,7 @@ public sealed class ValidationTests
     public void Reply_addresses_changed_after_the_sender_is_built_leave_the_sender_as_it_was()
     {
         List<ReportAddress> replyTo = [ReportAddress.Sms("+46701740699")];
-        var sender = Sender.ReplyNumber(replyTo);
+        var sender = SmsSender.ReplyNumber(replyTo);
 
         replyTo.Add(null!);
 
@@ -104,7 +104,7 @@ public sealed class ValidationTests
     [Fact]
     public void A_sender_name_over_eleven_characters_is_refused()
     {
-        var name = () => Sender.Name("Vårdcentralen");
+        var name = () => SmsSender.Name("Vårdcentralen");
 
         name.Should().Throw<ArgumentException>().WithParameterName("name");
     }
@@ -112,7 +112,7 @@ public sealed class ValidationTests
     [Fact]
     public void A_sender_name_of_eleven_characters_is_taken()
     {
-        var name = () => Sender.Name("Vårdcentral");
+        var name = () => SmsSender.Name("Vårdcentral");
 
         name.Should().NotThrow();
     }
@@ -120,7 +120,7 @@ public sealed class ValidationTests
     [Fact]
     public void An_empty_sender_name_is_refused()
     {
-        var name = () => Sender.Name(" ");
+        var name = () => SmsSender.Name(" ");
 
         name.Should().Throw<ArgumentException>().WithParameterName("name");
     }
@@ -128,7 +128,7 @@ public sealed class ValidationTests
     [Fact]
     public void A_sender_subject_over_eleven_characters_is_refused()
     {
-        var subject = () => Sender.Subject("Vårdcentralen");
+        var subject = () => SmsSender.Subject("Vårdcentralen");
 
         subject.Should().Throw<ArgumentException>().WithParameterName("subject");
     }
@@ -136,7 +136,7 @@ public sealed class ValidationTests
     [Fact]
     public void A_sender_subject_of_eleven_characters_is_taken()
     {
-        var subject = () => Sender.Subject("Vårdcentral");
+        var subject = () => SmsSender.Subject("Vårdcentral");
 
         subject.Should().NotThrow();
     }
@@ -144,7 +144,7 @@ public sealed class ValidationTests
     [Fact]
     public void An_empty_sender_subject_is_refused()
     {
-        var subject = () => Sender.Subject(" ");
+        var subject = () => SmsSender.Subject(" ");
 
         subject.Should().Throw<ArgumentException>().WithParameterName("subject");
     }
@@ -154,7 +154,7 @@ public sealed class ValidationTests
     [InlineData("+46 70 174 06 99")]
     public void A_sender_number_that_is_not_a_plus_and_digits_is_refused(string candidate)
     {
-        var sender = () => Sender.Number(candidate);
+        var sender = () => SmsSender.Number(candidate);
 
         sender.Should().Throw<ArgumentException>().WithParameterName("number");
     }

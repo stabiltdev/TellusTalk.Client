@@ -14,7 +14,7 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
             {
                 To = ["+46701740610"],
                 Text = "Din tid är bekräftad.",
-                Sender = Sender.Name("Clinic"),
+                Sender = SmsSender.Name("Clinic"),
                 ReportTo =
                 [
                     ReportAddress.Url(
@@ -44,7 +44,7 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
     public async Task A_subject_sender_reaches_the_emulator_without_warnings()
     {
         await emulator.Client.SendAsync(
-            new SmsMessage { To = ["+46701740616"], Text = "Din tid är bekräftad.", Sender = Sender.Subject("Clinic") },
+            new SmsMessage { To = ["+46701740616"], Text = "Din tid är bekräftad.", Sender = SmsSender.Subject("Clinic") },
             TestContext.Current.CancellationToken);
 
         var message = await SingleMessageAsync("+46701740616");
@@ -58,7 +58,7 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
     public async Task A_number_sender_reaches_the_emulator_without_warnings()
     {
         await emulator.Client.SendAsync(
-            new SmsMessage { To = ["+46701740611"], Text = "Svara på det här numret.", Sender = Sender.Number("+46701740698") },
+            new SmsMessage { To = ["+46701740611"], Text = "Svara på det här numret.", Sender = SmsSender.Number("+46701740698") },
             TestContext.Current.CancellationToken);
 
         var message = await SingleMessageAsync("+46701740611");
@@ -75,7 +75,7 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
             {
                 To = ["+46701740612"],
                 Text = "Svara JA för att bekräfta.",
-                Sender = Sender.ReplyNumber(
+                Sender = SmsSender.ReplyNumber(
                     replyTo: [ReportAddress.Url(new Uri("https://app.invalid/sms/replies"))],
                     samePerRecipient: true),
             },
