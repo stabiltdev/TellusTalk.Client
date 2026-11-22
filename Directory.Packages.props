@@ -17,7 +17,9 @@
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
-    <PackageVersion Include="Testcontainers" Version="4.16.0" />
+    <!-- The Testcontainers package runs the emulator image of its own version; the read API's client matches it. -->
+    <PackageVersion Include="Stabilt.TellusTalk.Emulator.Client" Version="0.7.0" />
+    <PackageVersion Include="Stabilt.TellusTalk.Emulator.Testcontainers" Version="0.7.0" />
     <PackageVersion Include="xunit.analyzers" Version="2.2.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="xunit.v3" Version="4.0.2" />

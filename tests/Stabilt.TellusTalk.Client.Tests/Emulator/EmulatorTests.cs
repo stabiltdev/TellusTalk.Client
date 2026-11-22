@@ -1,5 +1,5 @@
-using System.Net.Http.Json;
 using System.Text.Json;
+using Stabilt.TellusTalk.Emulator.Client;
 
 namespace Stabilt.TellusTalk.Client.Tests.Emulator;
 
@@ -34,10 +34,10 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
 
         var message = await SingleMessageAsync("+46701740610");
 
-        message.GetProperty("warnings").EnumerateArray().Should().BeEmpty();
-        message.GetProperty("text").GetString().Should().Be("Din tid är bekräftad.");
-        message.GetProperty("sender").GetProperty("shown").GetString().Should().Be("Clinic");
-        message.GetProperty("reportTo")[0].GetProperty("headers").GetProperty("Authorization").GetString().Should().Be("Bearer a+b/c=");
+        message.Warnings.Should().BeEmpty();
+        message.Text.Should().Be("Din tid är bekräftad.");
+        message.Sender!.Shown.Should().Be("Clinic");
+        message.ReportTo[0].Headers["Authorization"].Should().Be("Bearer a+b/c=");
     }
 
     [Fact]
@@ -49,8 +49,8 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
 
         var message = await SingleMessageAsync("+46701740611");
 
-        message.GetProperty("warnings").EnumerateArray().Should().BeEmpty();
-        message.GetProperty("sender").GetProperty("shown").GetString().Should().Be("+46701740698");
+        message.Warnings.Should().BeEmpty();
+        message.Sender!.Shown.Should().Be("+46701740698");
     }
 
     [Fact]
@@ -68,8 +68,8 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
 
         var message = await SingleMessageAsync("+46701740612");
 
-        message.GetProperty("warnings").EnumerateArray().Should().BeEmpty();
-        message.GetProperty("replyTo")[0].GetProperty("target").GetString().Should().Be("https://app.invalid/sms/replies");
+        message.Warnings.Should().BeEmpty();
+        message.ReplyTo[0].Target.Should().Be("https://app.invalid/sms/replies");
     }
 
     [Fact]
@@ -83,13 +83,13 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
 
         var message = await SingleMessageAsync("+46701740613");
 
-        message.GetProperty("warnings").EnumerateArray().Should().BeEmpty();
-        message.GetProperty("state").GetString().Should().Be("scheduled");
-        message.GetProperty("dueAt").GetDateTimeOffset().Should().Be(due);
+        message.Warnings.Should().BeEmpty();
+        message.State.Should().Be(MessageState.Scheduled);
+        message.DueAt.Should().Be(due);
     }
 
     [Fact]
-    public async Task The_emulators_answer_is_read_into_the_send_result()
+    public async Task The_emulators_answer_to_several_recipients_is_read_into_the_send_result()
     {
         var result = await emulator.Client.SendAsync(
             new SmsMessage { To = ["+46701740614", "+46701740615"], Text = "Till två." },
@@ -98,17 +98,14 @@ public sealed class EmulatorTests(EmulatorContainer emulator) : IClassFixture<Em
         var message = await SingleMessageAsync("+46701740614");
 
         result.JobSize.Should().Be(2);
-        result.JobId.Should().Be(message.GetProperty("jobId").GetString());
+        result.JobId.Should().Be(message.JobId);
+        result.LogUuid.Should().BeNull();
     }
 
-    private async Task<JsonElement> SingleMessageAsync(string to)
+    private async Task<CaughtMessage> SingleMessageAsync(string to)
     {
-        var list = await emulator.Api.GetFromJsonAsync<JsonElement>(
-            $"api/v1/messages?to={Uri.EscapeDataString(to)}",
-            TestContext.Current.CancellationToken);
+        var messages = await emulator.Api.GetMessagesAsync(new MessageQuery { To = to }, TestContext.Current.CancellationToken);
 
-        list.GetProperty("total").GetInt32().Should().Be(1);
-
-        return list.GetProperty("messages")[0];
+        return messages.Should().ContainSingle().Subject;
     }
 }

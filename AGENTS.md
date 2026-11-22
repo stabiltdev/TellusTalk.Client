@@ -45,4 +45,5 @@ A typed .NET client for TellusTalk's K8 send API: an app registers it with `AddT
 - Debug builds hide analyzer errors. Build `-c Release` before pushing.
 - The package targets `net8.0` and the 8.0 Microsoft.Extensions packages; an API newer than .NET 8 does not compile.
 - `JsonContent` streams its body chunked; the client serialises the body first so the request carries its length.
-- The emulator's image is pinned in `EmulatorContainer`; raising it is a change of its own.
+- The emulator's image is the version of `Stabilt.TellusTalk.Emulator.Testcontainers` in `Directory.Packages.props`;
+  raise it together with `Stabilt.TellusTalk.Emulator.Client`, as a change of its own.
