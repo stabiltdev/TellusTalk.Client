@@ -5,7 +5,6 @@ namespace Stabilt.TellusTalk.Client;
 /// <summary>Where TellusTalk is and the account to send as.</summary>
 public sealed class TellusTalkOptions : IValidatableObject
 {
-    /// <summary>TellusTalk's K8 API, or an emulator's address in its place.</summary>
     [Required]
     public Uri BaseUrl { get; set; } = new("https://k8api.tellustalk.com/");
 
