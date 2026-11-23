@@ -16,8 +16,10 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Stabilt.TellusTalk.Client/Stabilt.TellusTalk.Client.csproj" />
+    <Project Path="src/Stabilt.TellusTalk.Client.AspNetCore/Stabilt.TellusTalk.Client.AspNetCore.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Stabilt.TellusTalk.Client.Tests/Stabilt.TellusTalk.Client.Tests.csproj" />
+    <Project Path="tests/Stabilt.TellusTalk.Client.AspNetCore.Tests/Stabilt.TellusTalk.Client.AspNetCore.Tests.csproj" />
   </Folder>
 </Solution>

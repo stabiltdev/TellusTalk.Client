@@ -39,3 +39,4 @@ its `status` to `superseded by [ADR <identity>](<identity>.md)`, and update its 
 | [20261108-refuse-what-tellustalks-specification-forbids](20261108-refuse-what-tellustalks-specification-forbids.md) | Refuse what TellusTalk's specification forbids where the message is built | accepted |
 | [20261108-send-sms-only-with-one-type-per-choice](20261108-send-sms-only-with-one-type-per-choice.md) | Send SMS only, with one type for each choice TellusTalk spreads over several fields | accepted |
 | [20261108-retry-no-send](20261108-retry-no-send.md) | Retry no send | accepted |
+| [20261123-receive-delivery-reports-at-an-endpoint-checked-by-a-secret](20261123-receive-delivery-reports-at-an-endpoint-checked-by-a-secret.md) | Receive delivery reports at an endpoint of a package of its own, checked by a secret in Authorization | accepted |

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- net10.0, the oldest .NET still supported, and the first 10.0 Microsoft.Extensions packages, so an app on any
+       supported .NET can take it without being made to upgrade. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <Description>Receives TellusTalk's delivery reports in an ASP.NET Core app: an endpoint that checks the report secret and hands each report to the app's handler.</Description>
+    <Authors>Stabilt AB</Authors>
+    <Company>Stabilt AB</Company>
+    <PackageTags>tellustalk;sms;delivery-reports;aspnetcore</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/stabiltdev/TellusTalk.Client</PackageProjectUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stabilt.TellusTalk.Client\Stabilt.TellusTalk.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

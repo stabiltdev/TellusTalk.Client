@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Stabilt.TellusTalk.Emulator.Client" />
+    <PackageReference Include="Stabilt.TellusTalk.Emulator.Testcontainers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Stabilt.TellusTalk.Client\Stabilt.TellusTalk.Client.csproj" />
+    <ProjectReference Include="..\..\src\Stabilt.TellusTalk.Client.AspNetCore\Stabilt.TellusTalk.Client.AspNetCore.csproj" />
+  </ItemGroup>
+
+</Project>

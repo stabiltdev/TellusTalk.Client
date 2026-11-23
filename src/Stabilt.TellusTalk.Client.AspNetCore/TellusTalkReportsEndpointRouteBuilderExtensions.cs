@@ -1,0 +1,85 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Stabilt.TellusTalk.Client;
+using Stabilt.TellusTalk.Client.AspNetCore;
+
+#pragma warning disable IDE0130 // ASP.NET Core's endpoint mappings live here, so an app finds MapTellusTalkReports without a using.
+namespace Microsoft.AspNetCore.Builder;
+#pragma warning restore IDE0130
+
+public static class TellusTalkReportsEndpointRouteBuilderExtensions
+{
+    /// <summary>
+    /// Maps the <c>POST</c> endpoint TellusTalk posts delivery reports to. A report without the report secret is answered
+    /// <c>401</c> and a body that is not a report <c>400</c>; any other is handed to the app's
+    /// <see cref="ITellusTalkReportHandler"/> and answered <c>204</c>. A handler's exception is left to the app's error
+    /// handling.
+    /// </summary>
+    /// <param name="pattern">
+    /// The route, as the app receives it; <c>Reports:Url</c> is where TellusTalk reaches it, which a proxy may make another
+    /// path.
+    /// </param>
+    /// <returns>The endpoint's builder, for a route group, rate limiting, or leaving it out of OpenAPI.</returns>
+    /// <exception cref="InvalidOperationException">The app's services lack <c>AddTellusTalkReports</c> or <c>AddTellusTalkClient</c>.</exception>
+    public static IEndpointConventionBuilder MapTellusTalkReports(
+        this IEndpointRouteBuilder endpoints,
+        [StringSyntax("Route")] string pattern)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        ArgumentNullException.ThrowIfNull(pattern);
+
+        var registered = endpoints.ServiceProvider.GetRequiredService<IServiceProviderIsService>();
+        if (!registered.IsService(typeof(ITellusTalkReportHandler)) || !registered.IsService(typeof(TellusTalkClient)))
+        {
+            throw new InvalidOperationException("MapTellusTalkReports needs AddTellusTalkReports and AddTellusTalkClient in the app's services.");
+        }
+
+        // The endpoint checks the report secret itself, so an app's fallback authorization policy cannot turn TellusTalk
+        // away.
+        return endpoints
+            .MapPost(pattern, ReceiveAsync)
+            .AllowAnonymous();
+    }
+
+    private static async Task ReceiveAsync(HttpContext context)
+    {
+        // AddTellusTalkReports, which the mapping requires, validates that Reports is set whenever the options are read.
+        var reports = context.RequestServices.GetRequiredService<IOptionsMonitor<TellusTalkOptions>>().CurrentValue.Reports!;
+        if (!ReportAuthorization.IsValid(context.Request.Headers.Authorization, reports))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+
+        if (await ReadAsync(context.Request).ConfigureAwait(false) is not { } report)
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+
+        await context.RequestServices
+            .GetRequiredService<ITellusTalkReportHandler>()
+            .HandleAsync(report, context.RequestAborted)
+            .ConfigureAwait(false);
+
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
+    }
+
+    private static async Task<DeliveryReport?> ReadAsync(HttpRequest request)
+    {
+        try
+        {
+            return await JsonSerializer
+                .DeserializeAsync<DeliveryReport>(request.Body, cancellationToken: request.HttpContext.RequestAborted)
+                .ConfigureAwait(false);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+}
