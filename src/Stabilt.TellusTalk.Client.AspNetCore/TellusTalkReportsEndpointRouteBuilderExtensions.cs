@@ -23,7 +23,10 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     /// The route, as the app receives it; <c>Reports:Url</c> is where TellusTalk reaches it, which a proxy may make another
     /// path.
     /// </param>
-    /// <returns>The endpoint's builder, for a route group, rate limiting, or leaving it out of OpenAPI.</returns>
+    /// <returns>
+    /// The endpoint's builder, for a route group, rate limiting, or leaving it out of OpenAPI. An authorization policy put
+    /// on it is not applied, since the endpoint allows anonymous requests.
+    /// </returns>
     /// <exception cref="InvalidOperationException">The app's services lack <c>AddTellusTalkReports</c> or <c>AddTellusTalkClient</c>.</exception>
     public static IEndpointConventionBuilder MapTellusTalkReports(
         this IEndpointRouteBuilder endpoints,
