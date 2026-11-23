@@ -42,6 +42,16 @@ public sealed class ReportEndpointTests
     }
 
     [Fact]
+    public async Task A_report_turned_away_names_the_report_scheme()
+    {
+        await using var app = await ReportApp.StartAsync<RecordingReportHandler>();
+
+        var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, "Report wrong");
+
+        response.Headers.WwwAuthenticate.Should().ContainSingle().Which.Scheme.Should().Be("Report");
+    }
+
+    [Fact]
     public async Task A_request_without_the_secret_is_turned_away_before_its_body_is_read()
     {
         await using var app = await ReportApp.StartAsync<RecordingReportHandler>();

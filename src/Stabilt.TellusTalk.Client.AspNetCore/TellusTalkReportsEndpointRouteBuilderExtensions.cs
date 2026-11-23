@@ -52,6 +52,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         if (!ReportAuthorization.IsValid(context.Request.Headers.Authorization, reports))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.Headers.WWWAuthenticate = ReportAuthorization.Scheme;
             return;
         }
 
