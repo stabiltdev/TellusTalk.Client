@@ -135,7 +135,8 @@ new SmsMessage { To = […], Text = …, ReportTo = [tellusTalk.ReportAddress], 
 - The scheme is `Report` (my call), not `Bearer`: JWT bearer authentication in the app reads every `Bearer` value as a
   token, fails on the secret and logs it for each report, while it leaves another scheme alone.
 - K8 was seen sending every header an address's settings name, and every example in both repositories uses
-  `Authorization`, though the names tried were not recorded. A send to K8 whose report address carries
+  `Authorization`, though the names tried were not recorded; the receiver's log kept from the report probes of
+  2026-11-14 holds no such header, so the observation rests on 2026-11-07 alone. A send to K8 whose report address carries
   `Authorization: Report <secret>` confirms that the value arrives unchanged before the first release; the probe is with
   the emulator's maintainers.
 
@@ -174,6 +175,11 @@ new SmsMessage { To = […], Text = …, ReportTo = [tellusTalk.ReportAddress], 
   - a body that is not JSON, or has no `log_status` → `400`.
   - otherwise the handler is called with the report and the request's `CancellationToken`; when it returns → `200`.
     An exception is left to the app's own error handling, which answers `500`.
+- Neither TellusTalk's documentation nor the probes say what K8 does with an answer other than `200`. The codes follow
+  how webhooks are commonly answered, so they hold either way: `200` takes the report, `400` and `401` say that sending
+  it again changes nothing, and `500` asks for it again. If K8 never sends again, the `500` still shows the lost report
+  in the app's telemetry, where answering `200` regardless would hide it. A probe of K8 against a receiver that answers
+  `500`, `401` or nothing is with the emulator's maintainers.
 - `Reports.Url` and the mapped pattern are both stated by the app: behind a proxy that rewrites paths they differ, so
   neither is derived from the other.
 - The package never logs a report's body or the secret.
