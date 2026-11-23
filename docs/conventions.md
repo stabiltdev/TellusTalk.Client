@@ -46,12 +46,14 @@ code: `src/Stabilt.TellusTalk.Client/SmsMessage.cs`, `SmsSender.cs`, `ReportAddr
 
 ## Code style
 
-**Source:** code: `.editorconfig`, `Directory.Build.props`
+**Source:** code: `.editorconfig`, `Directory.Build.props`, the packages' `.csproj`
 
 - LINQ is a method chain, never query syntax, with one call per line once there are two; separate conditions are
   separate `Where` calls. An assertion chain stays on one line.
 - A comment says what the code cannot: a constraint, a rejected alternative, a consequence out of sight. It never
   restates a name, and it describes the code as it is, not the change that made it.
+- Every public member has an XML summary, which the packages ship for an app's editor; the Release build fails on one
+  without. It says what a caller needs and the name does not: a default, a rule, what TellusTalk does with the value.
 - An argument guard such as `ArgumentNullException.ThrowIfNull` belongs on a public member of a public type only.
 - An interface needs a purpose: something that uses the abstraction. A class without state is static and unregistered.
 - Packages are versioned centrally in `Directory.Packages.props`.
