@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 
 namespace Stabilt.TellusTalk.Client;
 
@@ -8,9 +9,27 @@ namespace Stabilt.TellusTalk.Client;
 /// Sends SMS through TellusTalk's K8 send API. Register it with <c>AddTellusTalkClient</c>, which gives it TellusTalk's
 /// address and the account's credentials.
 /// </summary>
-public sealed class TellusTalkClient(HttpClient httpClient)
+public sealed class TellusTalkClient(HttpClient httpClient, IOptionsMonitor<TellusTalkOptions> options)
 {
     private static readonly Uri SendPath = new("send/v1", UriKind.Relative);
+
+    /// <summary>
+    /// The address for a message's <c>ReportTo</c>: the <c>Reports</c> URL, carrying the report secret in
+    /// <c>Authorization</c>. It is read from the current settings, so a rotated secret is in the next address.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The settings have no <c>Reports</c>.</exception>
+    public ReportAddress ReportAddress
+    {
+        get
+        {
+            var reports = options.CurrentValue.Reports
+                ?? throw new InvalidOperationException("The report address needs the Reports settings, Reports:Url and Reports:Secret, beside the client's.");
+
+            return ReportAddress.Url(
+                reports.Url!,
+                new Dictionary<string, string>(StringComparer.Ordinal) { ["Authorization"] = ReportAuthorization.HeaderValue(reports.Secret) });
+        }
+    }
 
     /// <summary>Sends <paramref name="message"/>; the client adds no retries, since a send that failed in transit may have gone through.</summary>
     /// <exception cref="TellusTalkException">TellusTalk refused the message, or did not answer as a send is answered.</exception>

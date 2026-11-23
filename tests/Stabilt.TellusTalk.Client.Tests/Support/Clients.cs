@@ -34,4 +34,21 @@ internal static class Clients
 
     public static IReadOnlyDictionary<string, string?> With(string key, string? value) =>
         new Dictionary<string, string?>(Credentials, StringComparer.Ordinal) { [key] = value };
+
+    /// <summary>The credentials and the report settings; a setting given as <see langword="null"/> is left out.</summary>
+    public static Dictionary<string, string?> WithReports(string? url = "https://app.invalid/sms/reports", string? secret = "s3cret")
+    {
+        var settings = new Dictionary<string, string?>(Credentials, StringComparer.Ordinal);
+        if (url is not null)
+        {
+            settings["TellusTalk:Reports:Url"] = url;
+        }
+
+        if (secret is not null)
+        {
+            settings["TellusTalk:Reports:Secret"] = secret;
+        }
+
+        return settings;
+    }
 }
