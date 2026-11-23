@@ -11,6 +11,7 @@ using Stabilt.TellusTalk.Client.AspNetCore;
 namespace Microsoft.AspNetCore.Builder;
 #pragma warning restore IDE0130
 
+/// <summary><c>MapTellusTalkReports</c>, which maps the endpoint TellusTalk posts delivery reports to.</summary>
 public static class TellusTalkReportsEndpointRouteBuilderExtensions
 {
     /// <summary>
@@ -19,6 +20,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     /// <see cref="ITellusTalkReportHandler"/> and answered <c>204</c>. A handler's exception is left to the app's error
     /// handling.
     /// </summary>
+    /// <param name="endpoints">The app, or a route group, to map the endpoint in.</param>
     /// <param name="pattern">
     /// The route, as the app receives it; <c>Reports:Url</c> is where TellusTalk reaches it, which a proxy may make another
     /// path.

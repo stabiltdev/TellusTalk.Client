@@ -19,6 +19,10 @@ public sealed record DeliveryReport
     /// <summary>TellusTalk's status as it came, such as <c>txtDELIVERED</c>, from <c>log_status</c>.</summary>
     public required string StatusText { get; init; }
 
+    /// <summary>
+    /// <see cref="StatusText"/> as a <see cref="DeliveryStatus"/>; <see cref="DeliveryStatus.Unknown"/> for a status the
+    /// client does not know.
+    /// </summary>
     public DeliveryStatus Status => StatusText switch
     {
         "txtDELIVERED" => DeliveryStatus.Delivered,
@@ -58,6 +62,7 @@ public sealed record DeliveryReport
     public DateTimeOffset? ReportTime { get; init; }
 
     // A JsonElement equals only itself, so the record's own equality would find no two reports with an Echo equal.
+    /// <inheritdoc/>
     public bool Equals(DeliveryReport? other) =>
         other is not null
         && string.Equals(StatusText, other.StatusText, StringComparison.Ordinal)
@@ -77,6 +82,7 @@ public sealed record DeliveryReport
         };
 
     // Echo is left out: a hash that agrees with DeepEquals would have to walk the JSON, and the ids set reports apart.
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
         var hash = new HashCode();

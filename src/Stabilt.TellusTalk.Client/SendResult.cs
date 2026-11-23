@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 namespace Stabilt.TellusTalk.Client;
 
 /// <summary>TellusTalk's answer to a send, under TellusTalk's names; delivery reports carry the same ids.</summary>
+/// <param name="JobId">The job's id, from <c>job_id</c>.</param>
+/// <param name="JobUuid">The job's UUID, which each of its delivery reports carries as <see cref="DeliveryReport.JobUuid"/>.</param>
 /// <param name="LogUuid">
 /// The recipient's log id for a send to one recipient, or <see langword="null"/> for several, whose delivery reports each
 /// carry their own.

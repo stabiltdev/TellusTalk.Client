@@ -33,6 +33,7 @@ public sealed record SmsMessage
         }
     }
 
+    /// <summary>The SMS's text; a long one is sent in several parts, as many as <see cref="MaxParts"/> allows.</summary>
     public required string Text
     {
         get;
