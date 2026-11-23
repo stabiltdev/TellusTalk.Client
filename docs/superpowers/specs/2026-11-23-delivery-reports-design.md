@@ -173,13 +173,15 @@ new SmsMessage { To = […], Text = …, ReportTo = [tellusTalk.ReportAddress], 
   - an `Authorization` that is missing, of another scheme than `Report`, or whose value matches neither the secret nor
     a previous one → `401`, and the handler is not called; the comparison takes the same time whatever the value.
   - a body that is not JSON, or has no `log_status` → `400`.
-  - otherwise the handler is called with the report and the request's `CancellationToken`; when it returns → `200`.
-    An exception is left to the app's own error handling, which answers `500`.
+  - otherwise the handler is called with the report and the request's `CancellationToken`; when it returns → `204`,
+    since the answer carries nothing. An exception is left to the app's own error handling, which answers `500`.
 - Neither TellusTalk's documentation nor the probes say what K8 does with an answer other than `200`. The codes follow
-  how webhooks are commonly answered, so they hold either way: `200` takes the report, `400` and `401` say that sending
-  it again changes nothing, and `500` asks for it again. If K8 never sends again, the `500` still shows the lost report
-  in the app's telemetry, where answering `200` regardless would hide it. A probe of K8 against a receiver that answers
-  `500`, `401` or nothing is with the emulator's maintainers.
+  how webhooks are commonly answered, so they hold either way: `204` takes the report, `400` and `401` say that sending
+  it again changes nothing, and `500` asks for it again. If K8 never sends again, the `400`, `401` and `500` still show
+  a lost report in the app's telemetry, such as a secret changed in one place and not the other, where answering `204`
+  regardless would hide it. A probe of K8 against a receiver that answers `500`, `401` or nothing is with the
+  emulator's maintainers; the codes stand until it shows whether K8 sends a report again (decided with the user), and
+  are reconsidered if K8 does something harmful with them, such as turning the address off.
 - `Reports.Url` and the mapped pattern are both stated by the app: behind a proxy that rewrites paths they differ, so
   neither is derived from the other.
 - The package never logs a report's body or the secret.
