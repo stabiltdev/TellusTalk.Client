@@ -1,0 +1,79 @@
+using System.Diagnostics;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Stabilt.TellusTalk.Emulator.Client;
+
+namespace Stabilt.TellusTalk.Client.AspNetCore.Tests.Emulator;
+
+/// <summary>
+/// A message sent with the client's report address, the emulator's report of it, and the app's handler given that report.
+/// Each test sends to a number of its own, and the emulator reports at once on request.
+/// </summary>
+public sealed class ReportsFromTheEmulatorTests(EmulatorReportApp app) : IClassFixture<EmulatorReportApp>
+{
+    [Fact]
+    public async Task A_delivered_report_from_the_emulator_reaches_the_handler()
+    {
+        var result = await app.Client.SendAsync(
+            new SmsMessage
+            {
+                To = ["+46701740620"],
+                Text = "Din tid är bekräftad.",
+                ReportTo = [app.Client.ReportAddress],
+                Echo = JsonSerializer.SerializeToElement(new { appointment = 4711 }),
+            },
+            TestContext.Current.CancellationToken);
+
+        var report = await ReportAsync("+46701740620", "delivered");
+
+        report.Status.Should().Be(DeliveryStatus.Delivered);
+        report.LogUuid.Should().Be(result.LogUuid);
+        report.Echo!.Value.GetProperty("appointment").GetInt32().Should().Be(4711);
+    }
+
+    [Fact]
+    public async Task A_failed_report_from_the_emulator_reaches_the_handler()
+    {
+        await app.Client.SendAsync(
+            new SmsMessage { To = ["+46701740621"], Text = "Din tid är bekräftad.", ReportTo = [app.Client.ReportAddress] },
+            TestContext.Current.CancellationToken);
+
+        var report = await ReportAsync("+46701740621", "failed");
+
+        report.Status.Should().Be(DeliveryStatus.Failed);
+        report.FailedReason.Should().Be("txtFAILED_REASON: txtOPERATOR_ROUTING_ERROR, None");
+    }
+
+    /// <summary>
+    /// Has the emulator report the message to <paramref name="to"/> with <paramref name="status"/>, and waits for the
+    /// handler to be given it; a report that never comes fails with the emulator's attempts, which say whether it reached
+    /// the app.
+    /// </summary>
+    private async Task<DeliveryReport> ReportAsync(string to, string status)
+    {
+        var messages = await app.Api.GetMessagesAsync(new MessageQuery { To = to }, TestContext.Current.CancellationToken);
+        var message = messages.Should().ContainSingle().Subject;
+        message.Warnings.Should().BeEmpty();
+
+        using var response = await app.EmulatorHttp.PostAsJsonAsync(
+            new Uri($"api/messages/{message.Id}/reports", UriKind.Relative),
+            new { status },
+            TestContext.Current.CancellationToken);
+
+        var attempts = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.IsSuccessStatusCode.Should().BeTrue("the emulator answered {0}", attempts);
+
+        var waited = Stopwatch.StartNew();
+        while (Received(to) is null && waited.Elapsed < TimeSpan.FromSeconds(10))
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
+        }
+
+        var report = Received(to);
+        report.Should().NotBeNull("the emulator's attempts were {0}", attempts);
+
+        return report!;
+    }
+
+    private DeliveryReport? Received(string to) => app.Received.Reports.FirstOrDefault(report => string.Equals(report.To, to, StringComparison.Ordinal));
+}

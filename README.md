@@ -3,7 +3,7 @@
 A typed .NET client for [TellusTalk](https://tellustalk.com/)'s
 [K8 send API](https://k8api.tellustalk.com/openapi_docs/redoc.html). It sends SMS through `IHttpClientFactory`,
 configured from the app's configuration or in code, and refuses what TellusTalk's specification forbids before anything
-is sent. Not affiliated with TellusTalk.
+is sent. A second package receives TellusTalk's delivery reports in an ASP.NET Core app. Not affiliated with TellusTalk.
 
 ```shell
 dotnet add package Stabilt.TellusTalk.Client
@@ -87,6 +87,94 @@ what TellusTalk was seen to list before it is sent, so the lists hold what Tellu
 
 The client sends SMS only. TellusTalk's other channels, `html` and `attachments` on an SMS, binary SMS with `sms_udh`,
 and the deprecated `sms_format` and `sms_header` have no properties.
+
+## Delivery reports
+
+TellusTalk posts a delivery report to each URL in a message's `ReportTo`. `Stabilt.TellusTalk.Client.AspNetCore` maps
+the endpoint that receives them: it checks that a report carries the report secret, reads it, and hands it to a handler
+of the app's own.
+
+```shell
+dotnet add package Stabilt.TellusTalk.Client.AspNetCore
+```
+
+```json
+{
+  "TellusTalk": {
+    "UserName": "…",
+    "Password": "…",
+    "Reports": {
+      "Url": "https://app.example/sms/reports",
+      "Secret": "…"
+    }
+  }
+}
+```
+
+```csharp
+builder.Services.AddTellusTalkClient(builder.Configuration);
+builder.Services.AddTellusTalkReports<SmsReportHandler>();
+
+app.MapTellusTalkReports("/sms/reports");
+```
+
+```csharp
+public sealed class SmsReportHandler(IReportQueue queue) : ITellusTalkReportHandler
+{
+    public Task HandleAsync(DeliveryReport report, CancellationToken cancellationToken) =>
+        queue.EnqueueAsync(report, cancellationToken);
+}
+```
+
+```csharp
+await tellusTalk.SendAsync(
+    new SmsMessage
+    {
+        To = ["+46701740605"],
+        Text = "Your appointment is tomorrow at 08:30.",
+        ReportTo = [tellusTalk.ReportAddress],
+        Echo = JsonSerializer.SerializeToElement(new { appointment = 4711 }),
+    },
+    cancellationToken);
+```
+
+`TellusTalkClient.ReportAddress` is `Reports:Url` carrying the secret as `Authorization: Report <secret>`, which
+TellusTalk sends back with each report; the secret and the address come from the same settings, so they cannot
+disagree. `Reports` is optional, but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and
+`AddTellusTalkReports` requires `Reports`; a wrong setting fails when the app starts. `Reports:Url` is where TellusTalk
+reaches the app, and the pattern is the route the app receives it on; behind a proxy that rewrites paths they differ.
+
+`MapTellusTalkReports` returns the endpoint's builder, for a route group, rate limiting or `ExcludeFromDescription`. The
+endpoint allows anonymous requests, so an app's fallback authorization policy does not turn TellusTalk away, and checks
+the secret itself; nothing turns that check off. It answers:
+
+| Answer | When |
+|---|---|
+| `204` | The handler returned |
+| `401` | `Authorization` is missing, of another scheme than `Report`, or carries neither the secret nor a previous one; the handler is not called |
+| `400` | The body is not JSON, or has no `log_status` |
+| `500` | The handler threw; the app's own error handling answers |
+
+What TellusTalk does with an answer other than `200`, and whether it ever sends a report again, is not known. A handler
+should hand the report on quickly, such as to a queue, and take the same report twice without harm.
+
+| `Status` | TellusTalk's `log_status` |
+|---|---|
+| `Delivered` | `txtDELIVERED` |
+| `Failed` | `txtDELIVERY_FAILED`; `FailedReason` says why |
+| `Blocked` | `txtBLOCKED`: TellusTalk held the send back, such as a duplicate of one sent within five minutes; reported at once, without a `ReportTime` |
+| `Unknown` | Any other; `StatusText` and `StatusCode` hold TellusTalk's own |
+
+`To` is the number as the message gave it. A report is tied to its message by `Echo`, which comes back as it was sent
+and works for any number of recipients, or by `LogUuid` against `SendResult.LogUuid`, for a send to one recipient only.
+A report leaves out the message's text: the app has it already.
+
+To rotate the secret, set the new one as `Secret` and move the old one to `PreviousSecrets`
+(`"PreviousSecrets": ["…"]`). A report carries the secret its message was sent with, possibly days later, so keep the
+old one listed until those reports have come. A change to the section takes effect without a restart.
+
+An app without ASP.NET Core reads a report with `JsonSerializer.Deserialize<DeliveryReport>(body)` and checks the
+request's `Authorization` with `ReportAuthorization.IsValid(authorization, reports)`.
 
 ## Against the emulator
 

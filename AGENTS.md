@@ -1,7 +1,8 @@
 # TellusTalk Client
 
 A typed .NET client for TellusTalk's K8 send API: an app registers it with `AddTellusTalkClient`, builds an
-`SmsMessage`, and sends it. .NET 10 and later, `IHttpClientFactory`, one NuGet package.
+`SmsMessage`, and sends it. .NET 10 and later, `IHttpClientFactory`. Two NuGet packages, released together at one
+version: the client, and `Stabilt.TellusTalk.Client.AspNetCore`, which receives delivery reports in an ASP.NET Core app.
 
 ## Read first
 
@@ -26,10 +27,14 @@ A typed .NET client for TellusTalk's K8 send API: an app registers it with `AddT
 
 | Path | What |
 |---|---|
-| `src/Stabilt.TellusTalk.Client` | The client, the message and its parts, the options and `AddTellusTalkClient` |
-| `tests/Stabilt.TellusTalk.Client.Tests` | The requests the client sends and its refusals, against `RecordingHandler` |
+| `src/Stabilt.TellusTalk.Client` | The client, the message and its parts, the options and `AddTellusTalkClient`; a delivery report and the check of its secret |
+| `src/Stabilt.TellusTalk.Client.AspNetCore` | The report endpoint: `ITellusTalkReportHandler`, `AddTellusTalkReports` and `MapTellusTalkReports` |
+| `tests/Stabilt.TellusTalk.Client.Tests` | The requests the client sends and its refusals, against `RecordingHandler`; the reading of a report |
 | `tests/Stabilt.TellusTalk.Client.Tests/Emulator` | The same requests sent to TellusTalk Emulator in a container, which must hold them without warnings |
-| `.github/workflows/ci.yml` | Build, format check and tests; a `v*` tag publishes the package |
+| `tests/Stabilt.TellusTalk.Client.AspNetCore.Tests` | The endpoint's answers on `TestServer`, to the secret and the body |
+| `tests/Stabilt.TellusTalk.Client.AspNetCore.Tests/Emulator` | A message sent with the report address, and the emulator's report reaching the handler on Kestrel |
+| `tests/Shared` | Files linked into both test projects, such as K8's report bodies |
+| `.github/workflows/ci.yml` | Build, format check and tests; a `v*` tag publishes both packages |
 
 ## Commands
 
@@ -38,7 +43,7 @@ A typed .NET client for TellusTalk's K8 send API: an app registers it with `AddT
 | Build like CI | `dotnet build Stabilt.TellusTalk.Client.slnx -c Release` |
 | Format check | `dotnet format Stabilt.TellusTalk.Client.slnx --verify-no-changes` |
 | Test | `dotnet test --solution Stabilt.TellusTalk.Client.slnx` (Microsoft Testing Platform, through `global.json`; needs Docker) |
-| Pack | `dotnet pack src/Stabilt.TellusTalk.Client -c Release` |
+| Pack | `dotnet pack Stabilt.TellusTalk.Client.slnx -c Release` (both packages; the test projects are not packable) |
 
 ## Traps
 
