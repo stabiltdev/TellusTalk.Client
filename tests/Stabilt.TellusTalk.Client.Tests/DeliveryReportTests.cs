@@ -83,6 +83,14 @@ public sealed class DeliveryReportTests
         report.Parts.Should().BeNull();
     }
 
+    [Fact]
+    public void A_report_time_without_an_offset_is_read_as_utc()
+    {
+        var report = ReadDelivered(body => body["report_time"] = "2026-11-07T22:00:01");
+
+        report.ReportTime.Should().BeExactly(new DateTimeOffset(2026, 11, 7, 22, 0, 1, TimeSpan.Zero));
+    }
+
     [Theory]
     [InlineData("""{"to_address": "sms:+46701740605"}""")]
     [InlineData("""{"log_status": 22}""")]

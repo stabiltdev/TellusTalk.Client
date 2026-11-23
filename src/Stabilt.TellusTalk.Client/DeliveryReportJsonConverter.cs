@@ -78,8 +78,16 @@ internal sealed class DeliveryReportJsonConverter : JsonConverter<DeliveryReport
     private static int? Number(JsonElement body, string name) =>
         Field(body, name, JsonValueKind.Number) is { } number && number.TryGetInt32(out var value) ? value : null;
 
-    private static DateTimeOffset? Time(JsonElement body, string name) =>
-        Field(body, name, JsonValueKind.String) is { } text && text.TryGetDateTimeOffset(out var value) ? value : null;
+    private static DateTimeOffset? Time(JsonElement body, string name)
+    {
+        if (Field(body, name, JsonValueKind.String) is not { } text || !text.TryGetDateTime(out var time))
+        {
+            return null;
+        }
+
+        // K8's report times are UTC; one written without an offset would otherwise be read in the server's time zone.
+        return time.Kind == DateTimeKind.Unspecified ? new DateTimeOffset(time, TimeSpan.Zero) : text.GetDateTimeOffset();
+    }
 
     // The client writes a number as sms:<number>, so the report gives back the number the message held.
     private static string? WithoutSmsPrefix(string? address) =>
