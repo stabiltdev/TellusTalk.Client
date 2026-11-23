@@ -41,6 +41,17 @@ public sealed class ReportEndpointTests
     }
 
     [Fact]
+    public async Task A_request_without_the_secret_is_turned_away_before_its_body_is_read()
+    {
+        await using var app = await ReportApp.StartAsync<RecordingReportHandler>();
+
+        var response = await ReportApp.PostAsync(app, "not json", authorization: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        Received(app).Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task A_report_with_a_previous_secret_is_taken()
     {
         await using var app = await ReportApp.StartAsync<RecordingReportHandler>();
