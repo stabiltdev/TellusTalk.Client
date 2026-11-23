@@ -172,7 +172,10 @@ A report leaves out the message's text: the app has it already.
 
 To rotate the secret, set the new one as `Secret` and move the old one to `PreviousSecrets`
 (`"PreviousSecrets": ["…"]`). A report carries the secret its message was sent with, possibly days later, so keep the
-old one listed until those reports have come. A change to the section takes effect without a restart.
+old one listed until those reports have come. Where several instances of the app take reports, first list the new
+secret in `PreviousSecrets` on all of them, and only then make it `Secret`: an instance that does not know the new
+secret yet turns away the reports of messages another instance sent with it. A change to the section takes effect
+without a restart.
 
 An app without ASP.NET Core reads a report with `JsonSerializer.Deserialize<DeliveryReport>(body)` and checks the
 request's `Authorization` with `ReportAuthorization.IsValid(authorization, reports)`.
