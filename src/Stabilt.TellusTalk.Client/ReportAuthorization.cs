@@ -9,6 +9,7 @@ namespace Stabilt.TellusTalk.Client;
 /// </summary>
 public static class ReportAuthorization
 {
+    /// <summary>The scheme's name, <c>Report</c>, which <see cref="IsValid"/> matches in any case.</summary>
     public const string Scheme = "Report";
 
     /// <summary>

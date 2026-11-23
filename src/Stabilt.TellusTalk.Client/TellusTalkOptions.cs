@@ -5,12 +5,21 @@ namespace Stabilt.TellusTalk.Client;
 /// <summary>Where TellusTalk is and the account to send as.</summary>
 public sealed class TellusTalkOptions : IValidatableObject
 {
+    /// <summary>
+    /// TellusTalk's K8 API, an absolute http or https URL; <c>https://k8api.tellustalk.com/</c> unless set, such as to an
+    /// emulator's.
+    /// </summary>
     [Required]
     public Uri BaseUrl { get; set; } = new("https://k8api.tellustalk.com/");
 
+    /// <summary>The TellusTalk account's user name, which the client sends with Basic authentication.</summary>
     [Required]
     public string UserName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The account's password. Read from a configuration section, a changed password reaches the next client created,
+    /// without a restart.
+    /// </summary>
     [Required]
     public string Password { get; set; } = string.Empty;
 

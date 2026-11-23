@@ -9,6 +9,7 @@ using Stabilt.TellusTalk.Client;
 namespace Microsoft.Extensions.DependencyInjection;
 #pragma warning restore IDE0130
 
+/// <summary><c>AddTellusTalkClient</c>, which registers <see cref="TellusTalkClient"/> and its options.</summary>
 public static class TellusTalkServiceCollectionExtensions
 {
     private static readonly string Version = typeof(TellusTalkClient).Assembly
@@ -21,10 +22,12 @@ public static class TellusTalkServiceCollectionExtensions
     /// <paramref name="configuration"/>. Missing credentials or a base URL that is not http(s) fail when the app starts,
     /// and a change to the section reaches the next client created.
     /// </summary>
+    /// <param name="services">The app's services.</param>
     /// <param name="configuration">
     /// The configuration that holds the section, such as the app's <c>builder.Configuration</c>. A section passed as an
     /// <see cref="IConfiguration"/> is searched for <paramref name="sectionName"/> beneath it.
     /// </param>
+    /// <param name="sectionName">The section's name, <c>TellusTalk</c> unless given.</param>
     /// <returns>The client's <see cref="IHttpClientBuilder"/>, for handlers of the app's own.</returns>
     public static IHttpClientBuilder AddTellusTalkClient(
         this IServiceCollection services,

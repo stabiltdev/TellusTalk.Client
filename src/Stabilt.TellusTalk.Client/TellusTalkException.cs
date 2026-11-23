@@ -18,6 +18,7 @@ public sealed class TellusTalkException : Exception
         ResponseText = responseText;
     }
 
+    /// <summary>The status TellusTalk answered with; a success status means <see cref="Accepted"/>.</summary>
     public HttpStatusCode StatusCode { get; }
 
     /// <summary>TellusTalk's answer as it came.</summary>

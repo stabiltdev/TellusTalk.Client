@@ -6,6 +6,7 @@ using Stabilt.TellusTalk.Client.AspNetCore;
 namespace Microsoft.Extensions.DependencyInjection;
 #pragma warning restore IDE0130
 
+/// <summary><c>AddTellusTalkReports</c>, which registers the app's handler of TellusTalk's delivery reports.</summary>
 public static class TellusTalkReportsServiceCollectionExtensions
 {
     /// <summary>
