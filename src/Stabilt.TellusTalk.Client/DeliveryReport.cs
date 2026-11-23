@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -7,6 +9,10 @@ namespace Stabilt.TellusTalk.Client;
 /// A delivery report TellusTalk posts to a report URL, read from its JSON with <see cref="JsonSerializer"/>. The message's
 /// text, subject and html are left out on purpose: the app has them already, and a report carries personal data enough.
 /// </summary>
+/// <remarks>
+/// Two reports are equal when their properties are, <see cref="Echo"/> compared as JSON. Written as text, a report leaves
+/// out <see cref="To"/> and <see cref="Echo"/>.
+/// </remarks>
 [JsonConverter(typeof(DeliveryReportJsonConverter))]
 public sealed record DeliveryReport
 {
@@ -50,4 +56,51 @@ public sealed record DeliveryReport
 
     /// <summary>When TellusTalk learned the outcome; <see langword="null"/> for a send held back at once.</summary>
     public DateTimeOffset? ReportTime { get; init; }
+
+    // A JsonElement equals only itself, so the record's own equality would find no two reports with an Echo equal.
+    public bool Equals(DeliveryReport? other) =>
+        other is not null
+        && string.Equals(StatusText, other.StatusText, StringComparison.Ordinal)
+        && StatusCode == other.StatusCode
+        && string.Equals(FailedReason, other.FailedReason, StringComparison.Ordinal)
+        && string.Equals(FailedDetails, other.FailedDetails, StringComparison.Ordinal)
+        && string.Equals(To, other.To, StringComparison.Ordinal)
+        && string.Equals(JobUuid, other.JobUuid, StringComparison.Ordinal)
+        && string.Equals(LogUuid, other.LogUuid, StringComparison.Ordinal)
+        && Parts == other.Parts
+        && ReportTime == other.ReportTime
+        && (Echo, other.Echo) switch
+        {
+            (null, null) => true,
+            ({ } echo, { } otherEcho) => JsonElement.DeepEquals(echo, otherEcho),
+            _ => false,
+        };
+
+    // Echo is left out: a hash that agrees with DeepEquals would have to walk the JSON, and the ids set reports apart.
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(StatusText, StringComparer.Ordinal);
+        hash.Add(StatusCode);
+        hash.Add(FailedReason, StringComparer.Ordinal);
+        hash.Add(FailedDetails, StringComparer.Ordinal);
+        hash.Add(To, StringComparer.Ordinal);
+        hash.Add(JobUuid, StringComparer.Ordinal);
+        hash.Add(LogUuid, StringComparer.Ordinal);
+        hash.Add(Parts);
+        hash.Add(ReportTime);
+
+        return hash.ToHashCode();
+    }
+
+    // To and Echo are left out, so a report written to a log carries neither the recipient's number nor the app's data.
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder
+            .Append(CultureInfo.InvariantCulture, $"StatusText = {StatusText}, Status = {Status}, StatusCode = {StatusCode}, ")
+            .Append(CultureInfo.InvariantCulture, $"FailedReason = {FailedReason}, FailedDetails = {FailedDetails}, ")
+            .Append(CultureInfo.InvariantCulture, $"JobUuid = {JobUuid}, LogUuid = {LogUuid}, Parts = {Parts}, ReportTime = {ReportTime}");
+
+        return true;
+    }
 }

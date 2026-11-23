@@ -110,8 +110,37 @@ public sealed class DeliveryReportTests
 
         var readBack = JsonSerializer.Deserialize<DeliveryReport>(JsonSerializer.Serialize(report))!;
 
-        readBack.Should().BeEquivalentTo(report, options => options.ComparingByMembers<DeliveryReport>().Excluding(r => r.Echo));
-        JsonElement.DeepEquals(readBack.Echo!.Value, report.Echo!.Value).Should().BeTrue();
+        readBack.Should().Be(report);
+    }
+
+    [Fact]
+    public void Two_reports_read_from_the_same_body_are_equal()
+    {
+        var report = JsonSerializer.Deserialize<DeliveryReport>(ReportBodies.Delivered)!;
+        var same = JsonSerializer.Deserialize<DeliveryReport>(ReportBodies.Delivered)!;
+
+        report.Should().Be(same);
+        report.GetHashCode().Should().Be(same.GetHashCode());
+    }
+
+    [Fact]
+    public void Reports_whose_echo_differs_are_not_equal()
+    {
+        var report = JsonSerializer.Deserialize<DeliveryReport>(ReportBodies.Delivered)!;
+
+        var other = ReadDelivered(body => body["echo"] = JsonNode.Parse("""{"appointment": 4712}"""));
+
+        report.Should().NotBe(other);
+    }
+
+    [Fact]
+    public void A_report_written_as_text_leaves_out_the_number_and_the_echo()
+    {
+        var report = JsonSerializer.Deserialize<DeliveryReport>(ReportBodies.Delivered)!;
+
+        var text = report.ToString();
+
+        text.Should().Contain("txtDELIVERED").And.NotContain("46701740605").And.NotContain("4711");
     }
 
     private static DeliveryReport ReadDelivered(Action<JsonObject> change)
