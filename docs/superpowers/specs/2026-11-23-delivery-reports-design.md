@@ -126,16 +126,18 @@ new SmsMessage { To = […], Text = …, ReportTo = [tellusTalk.ReportAddress], 
   come days after it was sent (`sms_validity_time`): the endpoint takes the current secret and the previous ones, so a
   rotation does not turn away the reports of messages already sent. The settings are read through
   `IOptionsMonitor`, as the client's are, so a rotation needs no restart.
-- `TellusTalkClient.ReportAddress` is `ReportAddress.Url(Reports.Url, { [header] = Secret })`, read from the current
-  settings each time; without `Reports` it throws `InvalidOperationException` saying the setting is missing. The client
-  takes `IOptionsMonitor<TellusTalkOptions>` beside its `HttpClient`.
-- The header's name is `Report-Secret` (my call): a header of its own, so the app's authentication never reads it as a
-  credential, as it might `Authorization`. The value is the secret as it is.
-- K8 was seen sending every header an address's settings name, but which names were tried was not recorded, and every
-  example uses `Authorization`. The emulator passes any name on, so no test here can show it. A send to K8 with
-  `Report-Secret` settles it before the first release; the probe is with the emulator's maintainers. If K8 drops the
-  header, it becomes `Authorization` with a scheme of the package's own, such as `Authorization: Report <secret>`,
-  which JWT bearer authentication leaves alone.
+- `TellusTalkClient.ReportAddress` is `ReportAddress.Url(Reports.Url, { ["Authorization"] = "Report " + Secret })`,
+  read from the current settings each time; without `Reports` it throws `InvalidOperationException` saying the setting
+  is missing. The client takes `IOptionsMonitor<TellusTalkOptions>` beside its `HttpClient`.
+- The secret goes in `Authorization` (decided with the user): it is what the header is for, and logging tools, ASP.NET
+  Core's HTTP logging among them, treat it as a credential and leave its value out, as they would not a header of the
+  package's own.
+- The scheme is `Report` (my call), not `Bearer`: JWT bearer authentication in the app reads every `Bearer` value as a
+  token, fails on the secret and logs it for each report, while it leaves another scheme alone.
+- K8 was seen sending every header an address's settings name, and every example in both repositories uses
+  `Authorization`, though the names tried were not recorded. A send to K8 whose report address carries
+  `Authorization: Report <secret>` confirms that the value arrives unchanged before the first release; the probe is with
+  the emulator's maintainers.
 
 ### `DeliveryReport` (main package)
 
@@ -167,8 +169,8 @@ new SmsMessage { To = […], Text = …, ReportTo = [tellusTalk.ReportAddress], 
   is mapped, as `MapHealthChecks` does without `AddHealthChecks`. The endpoint is `AllowAnonymous`, so an app's
   fallback authorization policy does not turn TellusTalk away; it does its own check instead.
 - The endpoint, for each request:
-  - a `Report-Secret` that is missing, or matches neither the secret nor a previous one → `401`, and the handler is
-    not called; the comparison takes the same time whatever the value.
+  - an `Authorization` that is missing, of another scheme than `Report`, or whose value matches neither the secret nor
+    a previous one → `401`, and the handler is not called; the comparison takes the same time whatever the value.
   - a body that is not JSON, or has no `log_status` → `400`.
   - otherwise the handler is called with the report and the request's `CancellationToken`; when it returns → `200`.
     An exception is left to the app's own error handling, which answers `500`.
@@ -200,5 +202,5 @@ recipients, or `LogUuid` against the send's `SendResult.LogUuid`, for a send to 
   emulator sends a report at once with `POST /api/messages/{id}/reports` and `{"status":"delivered"}` or `"failed"`,
   which the emulator's client package has no method for.
 - The decision records the repository keeps in `docs/decisions`: at least receiving reports in a package of its own,
-  checked by a secret header from the client's settings.
+  checked by a secret from the client's settings in `Authorization`.
 - The README's section on reports, and the map in `AGENTS.md`.
