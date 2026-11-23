@@ -121,7 +121,7 @@ public sealed class ReportEndpointTests
     }
 
     [Fact]
-    public async Task An_app_that_requires_authenticated_users_still_takes_reports()
+    public async Task An_app_whose_fallback_policy_requires_authenticated_users_takes_reports()
     {
         await using var app = await ReportApp.StartAsync<RecordingReportHandler>(
             configure: builder =>
