@@ -55,7 +55,26 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
             return;
         }
 
-        if (await ReadAsync(context.Request).ConfigureAwait(false) is not { } report)
+        DeliveryReport? report;
+        try
+        {
+            report = await JsonSerializer
+                .DeserializeAsync<DeliveryReport>(context.Request.Body, cancellationToken: context.RequestAborted)
+                .ConfigureAwait(false);
+        }
+        catch (JsonException)
+        {
+            report = null;
+        }
+        catch (BadHttpRequestException exception)
+        {
+            // The server refused the body, such as one over its size limit. Left to the app's error handling, that would
+            // be logged as the app's failure and answered 500.
+            context.Response.StatusCode = exception.StatusCode;
+            return;
+        }
+
+        if (report is null)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
@@ -67,19 +86,5 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
             .ConfigureAwait(false);
 
         context.Response.StatusCode = StatusCodes.Status204NoContent;
-    }
-
-    private static async Task<DeliveryReport?> ReadAsync(HttpRequest request)
-    {
-        try
-        {
-            return await JsonSerializer
-                .DeserializeAsync<DeliveryReport>(request.Body, cancellationToken: request.HttpContext.RequestAborted)
-                .ConfigureAwait(false);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -90,6 +91,35 @@ public sealed class ReportEndpointTests
         var response = await ReportApp.PostAsync(app, body);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Received(app).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task A_body_the_server_refuses_is_answered_with_the_servers_status()
+    {
+        // TestServer sets no limit on a body, so this one runs on Kestrel.
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 100);
+        builder.Configuration.AddInMemoryCollection(ReportApp.Settings);
+        builder.Services.AddTellusTalkClient(builder.Configuration);
+        builder.Services.AddTellusTalkReports<RecordingReportHandler>();
+        builder.Services.AddSingleton<ReceivedReports>();
+        await using var app = builder.Build();
+        app.UseExceptionHandler(errors => errors.Run(_ => Task.CompletedTask));
+        app.MapTellusTalkReports("/sms/reports");
+        await app.StartAsync(TestContext.Current.CancellationToken);
+
+        using var client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("/sms/reports", UriKind.Relative))
+        {
+            Content = new StringContent(ReportBodies.Delivered, Encoding.UTF8, "application/json"),
+        };
+        request.Headers.TryAddWithoutValidation("Authorization", "Report s3cret");
+
+        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
         Received(app).Should().BeEmpty();
     }
 

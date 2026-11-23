@@ -154,6 +154,7 @@ the secret itself; nothing turns that check off. It answers:
 | `204` | The handler returned |
 | `401` | `Authorization` is missing, of another scheme than `Report`, or carries neither the secret nor a previous one; the handler is not called |
 | `400` | The body is not JSON, or has no `log_status` |
+| The server's own, such as `413` | The server refused the body, such as one over its size limit |
 | `500` | The handler threw; the app's own error handling answers |
 
 What TellusTalk does with an answer other than `200`, and whether it ever sends a report again, is not known. A handler
