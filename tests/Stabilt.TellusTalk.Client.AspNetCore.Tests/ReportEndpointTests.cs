@@ -202,6 +202,21 @@ public sealed class ReportEndpointTests
     }
 
     [Fact]
+    public async Task Mapping_the_endpoint_with_a_handler_registered_by_hand_is_refused()
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Configuration.AddInMemoryCollection(ReportApp.Credentials);
+        builder.Services.AddTellusTalkClient(builder.Configuration);
+        builder.Services.AddScoped<ITellusTalkReportHandler, RecordingReportHandler>();
+        await using var app = builder.Build();
+
+        var map = () => app.MapTellusTalkReports("/sms/reports");
+
+        map.Should().Throw<InvalidOperationException>().WithMessage("*AddTellusTalkReports*");
+    }
+
+    [Fact]
     public Task The_reports_registration_without_report_settings_fails_when_the_app_starts()
     {
         var start = () => ReportApp.StartAsync<RecordingReportHandler>(configure: builder =>

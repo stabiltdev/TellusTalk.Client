@@ -33,7 +33,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(pattern);
 
         var registered = endpoints.ServiceProvider.GetRequiredService<IServiceProviderIsService>();
-        if (!registered.IsService(typeof(ITellusTalkReportHandler)) || !registered.IsService(typeof(TellusTalkClient)))
+        if (!registered.IsService(typeof(TellusTalkReportsMarker)) || !registered.IsService(typeof(TellusTalkClient)))
         {
             throw new InvalidOperationException("MapTellusTalkReports needs AddTellusTalkReports and AddTellusTalkClient in the app's services.");
         }

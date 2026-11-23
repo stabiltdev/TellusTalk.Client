@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stabilt.TellusTalk.Client;
 using Stabilt.TellusTalk.Client.AspNetCore;
 
@@ -18,6 +19,7 @@ public static class TellusTalkReportsServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddScoped<ITellusTalkReportHandler, THandler>();
+        services.TryAddSingleton(new TellusTalkReportsMarker());
 
         services
             .AddOptions<TellusTalkOptions>()
