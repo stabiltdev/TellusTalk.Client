@@ -67,6 +67,26 @@ public sealed class ReportSettingsTests
         create.Should().Throw<OptionsValidationException>().WithMessage("*Reports*");
     }
 
+    [Theory]
+    [InlineData("TellusTalk:Reports:Secret", "s3cret ")]
+    [InlineData("TellusTalk:Reports:Secret", " s3cret")]
+    [InlineData("TellusTalk:Reports:Secret", "s3c ret")]
+    [InlineData("TellusTalk:Reports:Secret", "s3cret\n")]
+    [InlineData("TellusTalk:Reports:Secret", "s3crét")]
+    [InlineData("TellusTalk:Reports:PreviousSecrets:0", "0ld ")]
+    public async Task A_secret_that_is_not_visible_ascii_is_refused(string key, string secret)
+    {
+        var settings = Clients.WithReports();
+        settings[key] = secret;
+
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, settings);
+
+        var create = services.GetRequiredService<TellusTalkClient>;
+
+        create.Should().Throw<OptionsValidationException>().WithMessage("*visible ASCII*");
+    }
+
     [Fact]
     public async Task An_empty_previous_secret_is_refused()
     {

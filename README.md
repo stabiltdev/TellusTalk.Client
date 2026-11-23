@@ -141,7 +141,8 @@ await tellusTalk.SendAsync(
 `TellusTalkClient.ReportAddress` is `Reports:Url` carrying the secret as `Authorization: Report <secret>`, which
 TellusTalk sends back with each report; the secret and the address come from the same settings, so they cannot
 disagree. `Reports` is optional, but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and
-`AddTellusTalkReports` requires `Reports`; a wrong setting fails when the app starts. `Reports:Url` is where TellusTalk
+`AddTellusTalkReports` requires `Reports`; a wrong setting fails when the app starts. A secret is visible ASCII without
+spaces, such as a base64 or hex string, since a header would not carry anything else back intact. `Reports:Url` is where TellusTalk
 reaches the app, and the pattern is the route the app receives it on; behind a proxy that rewrites paths they differ.
 
 `MapTellusTalkReports` returns the endpoint's builder, for a route group, rate limiting or `ExcludeFromDescription`. The

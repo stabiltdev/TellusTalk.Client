@@ -44,10 +44,26 @@ public sealed class TellusTalkOptions : IValidatableObject
                 "Reports:Secret is required: TellusTalk's reports carry it, and the endpoint turns away a report without it.",
                 [nameof(Reports)]);
         }
+        else if (!IsVisibleAscii(Reports.Secret))
+        {
+            yield return new ValidationResult(
+                "Reports:Secret is visible ASCII without spaces, such as a base64 or hex string, since TellusTalk carries it back in a header.",
+                [nameof(Reports)]);
+        }
 
         if (Reports.PreviousSecrets.Any(string.IsNullOrWhiteSpace))
         {
             yield return new ValidationResult("Reports:PreviousSecrets holds an empty secret.", [nameof(Reports)]);
         }
+        else if (!Reports.PreviousSecrets.All(IsVisibleAscii))
+        {
+            yield return new ValidationResult(
+                "Reports:PreviousSecrets holds a secret that is not visible ASCII without spaces.",
+                [nameof(Reports)]);
+        }
     }
+
+    // A header loses a secret's leading and trailing spaces and cannot carry a control character, and how K8 encodes a
+    // character beyond ASCII has not been seen, so such a secret would turn away every report.
+    private static bool IsVisibleAscii(string secret) => secret.All(character => character is > ' ' and < '\x7f');
 }
