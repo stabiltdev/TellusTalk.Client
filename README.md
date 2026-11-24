@@ -68,7 +68,7 @@ send the SMS twice; an app that adds a resilience handler should leave `POST` ou
 | `Sender` | `sms_originator_source` and the fields that go with it | `SmsSender.Name("Clinic")`, at most 11 characters; `SmsSender.Subject("Clinic")`, a name sent as the `subject`, which sets the message apart from TellusTalk's duplicates and starts its report's text; `SmsSender.Number("+46…")`; `SmsSender.ReplyNumber(replyTo)`, a number of TellusTalk's that takes replies, which go to `replyTo` (`reply_to`) in `ReportTo`'s forms. Left out, the account's own sender |
 | `ScheduledSendTime` | `scheduled_send_time` | Sent with its offset, so it never depends on how TellusTalk reads a time without one |
 | `ReportTo` | `report_to` | Addresses besides the report address the client adds when `Reports` is set: `ReportAddress.Url(url)`, optionally with headers for the report request; `ReportAddress.Email(…)`; `ReportAddress.Sms(…)` |
-| `MaxParts` | `sms_max_parts` | At least 1 |
+| `MaxParts` | `sms_max_parts` | At least 1. TellusTalk cuts a text that needs more parts, as it does one beyond the account's setting Max number of parts, without a warning |
 | `Flash` | `sms_flash` | |
 | `ValidityTime` | `sms_validity_time` | At least a second; sent in whole seconds |
 | `CharacterSet` | `sms_character_set` | `Optimize`, `Gsm` or `Unicode`; `Gsm` is the caller's promise that the text is in the GSM alphabet |
@@ -141,8 +141,12 @@ When `Reports` is set, the client opens every message's `report_to` with `Report
 besides it. The secret and the address come from the same settings, so they cannot disagree. `Reports` is optional,
 but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and `AddTellusTalkReports` requires
 `Reports`; a wrong setting fails when the app starts. Give `Reports:Url` as https: over http the secret travels in the
-clear. A secret is visible ASCII without spaces, since a header would not carry anything else back intact;
-`openssl rand -base64 32` makes one.
+clear. Give it as the address the endpoint answers at, too: TellusTalk follows a `302` with a `GET` without the body,
+so the report is lost while TellusTalk logs it delivered. A secret is visible ASCII without spaces, since a header
+would not carry anything else back intact; `openssl rand -base64 32` makes one.
+
+TellusTalk logs each report it posts as a row of its own, and where the account has a dispatch limit, such as a test
+user's, the report counts against it.
 
 `MapTellusTalkReports()` maps the endpoint at the path of `Reports:Url`, read when the app maps it, so a changed path
 needs a restart. The URL has to be readable then, build-time OpenAPI generation included: an app that sets it only
@@ -164,8 +168,9 @@ the app puts on the endpoint, or on its route group, is not applied. It answers:
 | The server's own, such as `413` | The server refused the body, such as one over its size limit |
 | `500` | The handler threw; the app's own error handling answers |
 
-What TellusTalk does with an answer other than `200`, and whether it ever sends a report again, is not known. A handler
-should hand the report on quickly, such as to a queue, and take the same report twice without harm.
+TellusTalk posts each report once: after an answer such as `401` or `500`, or none within 60 seconds, it logs the
+report's delivery as failed and does not send it again. A report whose handler threw is lost, so a handler hands it on
+quickly, such as to a queue, before doing anything that can fail.
 
 | `Status` | TellusTalk's `log_status` |
 |---|---|
