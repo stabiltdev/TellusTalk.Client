@@ -15,6 +15,42 @@ namespace Microsoft.AspNetCore.Builder;
 public static class TellusTalkReportsEndpointRouteBuilderExtensions
 {
     /// <summary>
+    /// Maps the <c>POST</c> endpoint TellusTalk posts delivery reports to at the path of <c>Reports:Url</c>, and is
+    /// otherwise the overload that takes the route. The path is read when the endpoint is mapped, so a changed path needs
+    /// a restart. Where the app receives on another route than TellusTalk calls, behind a proxy that rewrites paths,
+    /// under <c>UsePathBase</c> or in a route group, the app gives the route to that overload.
+    /// </summary>
+    /// <param name="endpoints">The app to map the endpoint in.</param>
+    /// <returns>
+    /// The endpoint's builder, for rate limiting, or leaving it out of OpenAPI. An authorization policy put on it is not
+    /// applied, since the endpoint allows anonymous requests.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// The app's services lack <c>AddTellusTalkReports</c> or <c>AddTellusTalkClient</c>, <paramref name="endpoints"/> is a
+    /// route group, or <c>Reports:Url</c> is not an absolute URL.
+    /// </exception>
+    public static IEndpointConventionBuilder MapTellusTalkReports(this IEndpointRouteBuilder endpoints)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        EnsureRegistered(endpoints.ServiceProvider);
+
+        if (endpoints is RouteGroupBuilder)
+        {
+            throw new InvalidOperationException("MapTellusTalkReports() maps the whole path of Reports:Url, which a route group's prefix would go in front of; in a route group, give it the route.");
+        }
+
+        var url = ReportUrl(endpoints.ServiceProvider);
+        if (url is not { IsAbsoluteUri: true })
+        {
+            throw new InvalidOperationException("MapTellusTalkReports() maps the path of Reports:Url, an absolute http or https URL; set it, or give the route.");
+        }
+
+        // Routing matches the request's path decoded.
+        return endpoints.MapTellusTalkReports(Uri.UnescapeDataString(url.AbsolutePath));
+    }
+
+    /// <summary>
     /// Maps the <c>POST</c> endpoint TellusTalk posts delivery reports to. A report without the report secret is answered
     /// <c>401</c> and a body that is not a report <c>400</c>; any other is handed to the app's
     /// <see cref="ITellusTalkReportHandler"/> and answered <c>204</c>. A handler's exception is left to the app's error
@@ -22,8 +58,8 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     /// </summary>
     /// <param name="endpoints">The app, or a route group, to map the endpoint in.</param>
     /// <param name="pattern">
-    /// The route, as the app receives it; <c>Reports:Url</c> is where TellusTalk reaches it, which a proxy may make another
-    /// path.
+    /// The route, as the app receives it, where it is not the path of <c>Reports:Url</c>: behind a proxy that rewrites
+    /// paths, under <c>UsePathBase</c>, or in a route group.
     /// </param>
     /// <returns>
     /// The endpoint's builder, for a route group, rate limiting, or leaving it out of OpenAPI. An authorization policy put
@@ -37,17 +73,33 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
         ArgumentNullException.ThrowIfNull(pattern);
 
-        var registered = endpoints.ServiceProvider.GetRequiredService<IServiceProviderIsService>();
-        if (!registered.IsService(typeof(TellusTalkReportsMarker)) || !registered.IsService(typeof(TellusTalkClient)))
-        {
-            throw new InvalidOperationException("MapTellusTalkReports needs AddTellusTalkReports and AddTellusTalkClient in the app's services.");
-        }
+        EnsureRegistered(endpoints.ServiceProvider);
 
         // The endpoint checks the report secret itself, so an app's fallback authorization policy cannot turn TellusTalk
         // away.
         return endpoints
             .MapPost(pattern, ReceiveAsync)
             .AllowAnonymous();
+    }
+
+    private static void EnsureRegistered(IServiceProvider services)
+    {
+        var registered = services.GetRequiredService<IServiceProviderIsService>();
+        if (!registered.IsService(typeof(TellusTalkReportsMarker)) || !registered.IsService(typeof(TellusTalkClient)))
+        {
+            throw new InvalidOperationException("MapTellusTalkReports needs AddTellusTalkReports and AddTellusTalkClient in the app's services.");
+        }
+    }
+
+    // Without the options' validation: build-time OpenAPI generation runs the app without its secrets. The app's start
+    // still validates the settings in full.
+    private static Uri? ReportUrl(IServiceProvider services)
+    {
+        var factory = new OptionsFactory<TellusTalkOptions>(
+            services.GetServices<IConfigureOptions<TellusTalkOptions>>(),
+            services.GetServices<IPostConfigureOptions<TellusTalkOptions>>());
+
+        return factory.Create(Options.DefaultName).Reports?.Url;
     }
 
     private static async Task ReceiveAsync(HttpContext context)

@@ -198,6 +198,86 @@ public sealed class ReportEndpointTests
     }
 
     [Fact]
+    public async Task The_endpoint_mapped_without_a_route_takes_reports_at_the_path_of_the_report_url()
+    {
+        await using var app = await ReportApp.StartAsync<RecordingReportHandler>(
+            configure: WithReportUrl("https://app.invalid/hooks/tellustalk"));
+
+        var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, path: "/hooks/tellustalk");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task The_query_of_the_report_url_is_not_part_of_the_route()
+    {
+        await using var app = await ReportApp.StartAsync<RecordingReportHandler>(
+            configure: WithReportUrl("https://app.invalid/sms/reports?source=k8"));
+
+        var response = await ReportApp.PostAsync(app, ReportBodies.Delivered);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task A_route_given_to_the_endpoint_is_taken_instead_of_the_path_of_the_report_url()
+    {
+        await using var app = await ReportApp.StartAsync<RecordingReportHandler>(
+            map: web => web.MapTellusTalkReports("/internal/reports"));
+
+        var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, path: "/internal/reports");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public Task Mapping_the_endpoint_without_a_route_in_a_route_group_is_refused()
+    {
+        var start = () => ReportApp.StartAsync<RecordingReportHandler>(
+            map: web => web.MapGroup("/integrations").MapTellusTalkReports());
+
+        return start.Should().ThrowAsync<InvalidOperationException>().WithMessage("*route group*");
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(null, "s3cret")]
+    [InlineData("/sms/reports", "s3cret")]
+    public async Task Mapping_the_endpoint_without_a_route_and_without_an_absolute_report_url_is_refused(string? url, string? secret)
+    {
+        var settings = new Dictionary<string, string?>(ReportApp.Credentials, StringComparer.Ordinal);
+        if (url is not null)
+        {
+            settings["TellusTalk:Reports:Url"] = url;
+        }
+
+        if (secret is not null)
+        {
+            settings["TellusTalk:Reports:Secret"] = secret;
+        }
+
+        await using var app = Unstarted(settings);
+
+        var map = () => app.MapTellusTalkReports();
+
+        map.Should().Throw<InvalidOperationException>().WithMessage("*Reports:Url*");
+    }
+
+    [Fact]
+    public async Task Mapping_the_endpoint_without_a_route_reads_the_report_url_without_validating_the_other_settings()
+    {
+        // Build-time OpenAPI generation runs the app without its credentials and secret.
+        await using var app = Unstarted(new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["TellusTalk:Reports:Url"] = "https://app.invalid/sms/reports",
+        });
+
+        var map = () => app.MapTellusTalkReports();
+
+        map.Should().NotThrow();
+    }
+
+    [Fact]
     public async Task Mapping_the_endpoint_without_the_reports_registration_is_refused()
     {
         var builder = WebApplication.CreateSlimBuilder();
@@ -229,15 +309,32 @@ public sealed class ReportEndpointTests
     [Fact]
     public Task The_reports_registration_without_report_settings_fails_when_the_app_starts()
     {
-        var start = () => ReportApp.StartAsync<RecordingReportHandler>(configure: builder =>
-        {
-            builder.Configuration.Sources.Clear();
-            builder.Configuration.AddInMemoryCollection(ReportApp.Credentials);
-        });
+        var start = () => ReportApp.StartAsync<RecordingReportHandler>(
+            configure: builder =>
+            {
+                builder.Configuration.Sources.Clear();
+                builder.Configuration.AddInMemoryCollection(ReportApp.Credentials);
+            },
+            map: web => web.MapTellusTalkReports("/sms/reports"));
 
         return start.Should().ThrowAsync<OptionsValidationException>().WithMessage("*Reports*");
     }
 
     private static ConcurrentQueue<DeliveryReport> Received(WebApplication app) =>
         app.Services.GetRequiredService<ReceivedReports>().Reports;
+
+    private static Action<WebApplicationBuilder> WithReportUrl(string url) => builder => builder.Configuration.AddInMemoryCollection(
+        new Dictionary<string, string?>(StringComparer.Ordinal) { ["TellusTalk:Reports:Url"] = url });
+
+    /// <summary>An app built, not started, with the client and its reports registered from <paramref name="settings"/>.</summary>
+    private static WebApplication Unstarted(IReadOnlyDictionary<string, string?> settings)
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Configuration.AddInMemoryCollection(settings);
+        builder.Services.AddTellusTalkClient(builder.Configuration);
+        builder.Services.AddTellusTalkReports<RecordingReportHandler>();
+
+        return builder.Build();
+    }
 }

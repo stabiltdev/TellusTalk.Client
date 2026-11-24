@@ -25,7 +25,7 @@ internal static class ReportApp
 
     /// <summary>
     /// Starts the app with <see cref="Settings"/>; <paramref name="configure"/> may change the settings and the services,
-    /// and <paramref name="map"/> replaces the mapping at <c>/sms/reports</c>.
+    /// and <paramref name="map"/> replaces the mapping at the path of <c>Reports:Url</c>.
     /// </summary>
     public static async Task<WebApplication> StartAsync<THandler>(
         Action<WebApplicationBuilder>? configure = null,
@@ -40,7 +40,7 @@ internal static class ReportApp
         builder.Services.AddSingleton<ReceivedReports>();
         configure?.Invoke(builder);
 
-        map ??= web => web.MapTellusTalkReports("/sms/reports");
+        map ??= web => web.MapTellusTalkReports();
 
         var app = builder.Build();
         try
