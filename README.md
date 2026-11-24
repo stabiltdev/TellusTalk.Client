@@ -68,7 +68,7 @@ send the SMS twice; an app that adds a resilience handler should leave `POST` ou
 | `Sender` | `sms_originator_source` and the fields that go with it | `SmsSender.Name("Clinic")`, at most 11 characters; `SmsSender.Subject("Clinic")`, a name sent as the `subject`, which sets the message apart from TellusTalk's duplicates and starts its report's text; `SmsSender.Number("+46…")`; `SmsSender.ReplyNumber(replyTo)`, a number of TellusTalk's that takes replies, which go to `replyTo` (`reply_to`) in `ReportTo`'s forms. Left out, the account's own sender |
 | `ScheduledSendTime` | `scheduled_send_time` | Sent with its offset, so it never depends on how TellusTalk reads a time without one |
 | `ReportTo` | `report_to` | Addresses besides the report address the client adds when `Reports` is set: `ReportAddress.Url(url)`, optionally with headers for the report request; `ReportAddress.Email(…)`; `ReportAddress.Sms(…)` |
-| `MaxParts` | `sms_max_parts` | At least 1 |
+| `MaxParts` | `sms_max_parts` | At least 1. TellusTalk cuts a text that needs more parts, as it does one beyond the account's setting Max number of parts, without a warning |
 | `Flash` | `sms_flash` | |
 | `ValidityTime` | `sms_validity_time` | At least a second; sent in whole seconds |
 | `CharacterSet` | `sms_character_set` | `Optimize`, `Gsm` or `Unicode`; `Gsm` is the caller's promise that the text is in the GSM alphabet |
