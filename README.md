@@ -33,7 +33,6 @@ public sealed class Reminders(TellusTalkClient tellusTalk)
             To = ["+46701740605"],
             Text = "Your appointment is tomorrow at 08:30.",
             Sender = SmsSender.Name("Clinic"),
-            ReportTo = [ReportAddress.Url(new Uri("https://app.example/sms/reports"))],
         },
         cancellationToken);
 }
@@ -68,7 +67,7 @@ send the SMS twice; an app that adds a resilience handler should leave `POST` ou
 | `Text` | `text` | |
 | `Sender` | `sms_originator_source` and the fields that go with it | `SmsSender.Name("Clinic")`, at most 11 characters; `SmsSender.Subject("Clinic")`, a name sent as the `subject`, which sets the message apart from TellusTalk's duplicates and starts its report's text; `SmsSender.Number("+46…")`; `SmsSender.ReplyNumber(replyTo)`, a number of TellusTalk's that takes replies, which go to `replyTo` (`reply_to`) in `ReportTo`'s forms. Left out, the account's own sender |
 | `ScheduledSendTime` | `scheduled_send_time` | Sent with its offset, so it never depends on how TellusTalk reads a time without one |
-| `ReportTo` | `report_to` | `ReportAddress.Url(url)`, optionally with headers for the report request; `ReportAddress.Email(…)`; `ReportAddress.Sms(…)` |
+| `ReportTo` | `report_to` | Addresses besides the report address the client adds when `Reports` is set: `ReportAddress.Url(url)`, optionally with headers for the report request; `ReportAddress.Email(…)`; `ReportAddress.Sms(…)` |
 | `MaxParts` | `sms_max_parts` | At least 1 |
 | `Flash` | `sms_flash` | |
 | `ValidityTime` | `sms_validity_time` | At least a second; sent in whole seconds |
@@ -90,9 +89,9 @@ and the deprecated `sms_format` and `sms_header` have no properties.
 
 ## Delivery reports
 
-TellusTalk posts a delivery report to each URL in a message's `ReportTo`. `Stabilt.TellusTalk.Client.AspNetCore` maps
-the endpoint that receives them: it checks that a report carries the report secret, reads it, and hands it to a handler
-of the app's own.
+TellusTalk posts a delivery report to each URL in a message's `report_to`. With the `Reports` settings, the client puts
+the app's report address in every message, and `Stabilt.TellusTalk.Client.AspNetCore` maps the endpoint that receives
+the reports: it checks that a report carries the report secret, reads it, and hands it to a handler of the app's own.
 
 ```shell
 dotnet add package Stabilt.TellusTalk.Client.AspNetCore
@@ -115,7 +114,7 @@ dotnet add package Stabilt.TellusTalk.Client.AspNetCore
 builder.Services.AddTellusTalkClient(builder.Configuration);
 builder.Services.AddTellusTalkReports<SmsReportHandler>();
 
-app.MapTellusTalkReports("/sms/reports");
+app.MapTellusTalkReports();
 ```
 
 ```csharp
@@ -132,19 +131,25 @@ await tellusTalk.SendAsync(
     {
         To = ["+46701740605"],
         Text = "Your appointment is tomorrow at 08:30.",
-        ReportTo = [tellusTalk.ReportAddress],
         Echo = JsonSerializer.SerializeToElement(new { appointment = 4711 }),
     },
     cancellationToken);
 ```
 
-`TellusTalkClient.ReportAddress` is `Reports:Url` carrying the secret as `Authorization: Report <secret>`, which
-TellusTalk sends back with each report; the secret and the address come from the same settings, so they cannot
-disagree. `Reports` is optional, but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and
-`AddTellusTalkReports` requires `Reports`; a wrong setting fails when the app starts. Give `Reports:Url` as https: over
-http the secret travels in the clear. A secret is visible ASCII without spaces, since a header would not carry anything
-else back intact; `openssl rand -base64 32` makes one. `Reports:Url` is where TellusTalk reaches the app, and the
-pattern is the route the app receives it on; behind a proxy that rewrites paths they differ.
+When `Reports` is set, the client opens every message's `report_to` with `Reports:Url` carrying the secret as
+`Authorization: Report <secret>`, which TellusTalk sends back with each report; a message's `ReportTo` adds addresses
+besides it. The secret and the address come from the same settings, so they cannot disagree. `Reports` is optional,
+but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and `AddTellusTalkReports` requires
+`Reports`; a wrong setting fails when the app starts. Give `Reports:Url` as https: over http the secret travels in the
+clear. A secret is visible ASCII without spaces, since a header would not carry anything else back intact;
+`openssl rand -base64 32` makes one.
+
+`MapTellusTalkReports()` maps the endpoint at the path of `Reports:Url`, read when the app maps it, so a changed path
+needs a restart. The URL has to be readable then, build-time OpenAPI generation included: an app that sets it only
+where it is deployed keeps one with the right path in `appsettings.json`, or gives the route. Where the app receives on another route than TellusTalk calls, behind a proxy that rewrites paths such
+as Azure Front Door, under `UsePathBase` or in a route group, the app gives the route:
+`MapTellusTalkReports("/internal/route")`. In a route group, `MapTellusTalkReports()` without a route is refused, since
+the group's prefix would go in front of the whole path.
 
 `MapTellusTalkReports` returns the endpoint's builder, for a route group, rate limiting or `ExcludeFromDescription`. The
 endpoint allows anonymous requests, so an app's fallback authorization policy does not turn TellusTalk away, and checks
@@ -177,11 +182,12 @@ To rotate the secret, set the new one as `Secret` and move the old one to `Previ
 (`"PreviousSecrets": ["…"]`). A report carries the secret its message was sent with, possibly days later, so keep the
 old one listed until those reports have come. Where several instances of the app take reports, first list the new
 secret in `PreviousSecrets` on all of them, and only then make it `Secret`: an instance that does not know the new
-secret yet turns away the reports of messages another instance sent with it. A change to the section takes effect
-without a restart.
+secret yet turns away the reports of messages another instance sent with it. A changed secret takes effect without a
+restart.
 
-An app without ASP.NET Core reads a report with `JsonSerializer.Deserialize<DeliveryReport>(body)` and checks the
-request's `Authorization` with `ReportAuthorization.IsValid(authorization, reports)`.
+An app without ASP.NET Core sets `Reports` too, so the client puts the report address in its messages. It reads a
+report with `JsonSerializer.Deserialize<DeliveryReport>(body)` and checks the request's `Authorization` with
+`ReportAuthorization.IsValid(authorization, reports)`.
 
 ## Against the emulator
 

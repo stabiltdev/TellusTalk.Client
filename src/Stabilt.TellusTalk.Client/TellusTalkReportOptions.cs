@@ -3,7 +3,10 @@ namespace Stabilt.TellusTalk.Client;
 /// <summary>Where TellusTalk posts delivery reports, and the secret that shows a report comes from TellusTalk.</summary>
 public sealed class TellusTalkReportOptions
 {
-    /// <summary>The http or https URL TellusTalk posts each report to, as the world reaches the app.</summary>
+    /// <summary>
+    /// The http or https URL TellusTalk posts each report to, as the world reaches the app. Every message carries it, and
+    /// <c>MapTellusTalkReports()</c> maps the report endpoint at its path.
+    /// </summary>
     public Uri? Url { get; set; }
 
     /// <summary>The secret the report address carries in <c>Authorization</c>, and a report must carry back.</summary>

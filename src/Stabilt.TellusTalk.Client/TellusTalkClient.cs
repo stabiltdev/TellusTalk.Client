@@ -14,32 +14,20 @@ public sealed class TellusTalkClient(HttpClient httpClient, IOptionsMonitor<Tell
     private static readonly Uri SendPath = new("send/v1", UriKind.Relative);
 
     /// <summary>
-    /// The address for a message's <c>ReportTo</c>: the <c>Reports</c> URL, carrying the report secret in
-    /// <c>Authorization</c>. It is read from the current settings, so a rotated secret is in the next address.
+    /// Sends <paramref name="message"/>; the client adds no retries, since a send that failed in transit may have gone
+    /// through. When the <c>Reports</c> settings are set, the message's <c>report_to</c> opens with their report address,
+    /// read from the current settings so a rotated secret reaches the next message.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The settings have no <c>Reports</c>.</exception>
-    public ReportAddress ReportAddress
-    {
-        get
-        {
-            var reports = options.CurrentValue.Reports
-                ?? throw new InvalidOperationException("The report address needs the Reports settings, Reports:Url and Reports:Secret, beside the client's.");
-
-            return ReportAddress.Url(
-                reports.Url!,
-                new Dictionary<string, string>(StringComparer.Ordinal) { ["Authorization"] = ReportAuthorization.HeaderValue(reports.Secret) });
-        }
-    }
-
-    /// <summary>Sends <paramref name="message"/>; the client adds no retries, since a send that failed in transit may have gone through.</summary>
     /// <exception cref="TellusTalkException">TellusTalk refused the message, or did not answer as a send is answered.</exception>
     public async Task<SendResult> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);
 
+        var reportAddress = ReportAddressOf(options.CurrentValue.Reports);
+
         // Serialised up front so the request carries its length; JsonContent would stream it chunked.
         using var content = new StringContent(
-            JsonSerializer.Serialize(SendRequestBody.From(message), Json.Options),
+            JsonSerializer.Serialize(SendRequestBody.From(message, reportAddress), Json.Options),
             Encoding.UTF8,
             "application/json");
 
@@ -58,6 +46,12 @@ public sealed class TellusTalkClient(HttpClient httpClient, IOptionsMonitor<Tell
 
         return Read(response.StatusCode, text);
     }
+
+    private static ReportAddress? ReportAddressOf(TellusTalkReportOptions? reports) => reports is null
+        ? null
+        : ReportAddress.Url(
+            reports.Url!,
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["Authorization"] = ReportAuthorization.HeaderValue(reports.Secret) });
 
     private static SendResult Read(HttpStatusCode statusCode, string text)
     {
