@@ -23,7 +23,7 @@ internal sealed record SendRequestBody(
     [property: JsonPropertyName("billing_id")] string? BillingId,
     [property: JsonPropertyName("echo")] JsonElement? Echo)
 {
-    public static SendRequestBody From(SmsMessage message) => new(
+    public static SendRequestBody From(SmsMessage message, ReportAddress? reportAddress) => new(
         message.To
             .Select(number => "sms:" + number)
             .ToList(),
@@ -34,7 +34,7 @@ internal sealed record SendRequestBody(
         message.Sender?.SubjectText,
         message.Sender?.SingleThread,
         message.ScheduledSendTime?.ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture),
-        Addresses(message.ReportTo),
+        Addresses(reportAddress is null ? message.ReportTo : [reportAddress, .. message.ReportTo]),
         Addresses(message.Sender?.ReplyTo ?? []),
         message.MaxParts,
         message.Flash ? true : null,

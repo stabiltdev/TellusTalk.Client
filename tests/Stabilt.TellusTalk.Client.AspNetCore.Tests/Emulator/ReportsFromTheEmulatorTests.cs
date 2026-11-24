@@ -6,8 +6,8 @@ using Stabilt.TellusTalk.Emulator.Client;
 namespace Stabilt.TellusTalk.Client.AspNetCore.Tests.Emulator;
 
 /// <summary>
-/// A message sent with the client's report address, the emulator's report of it, and the app's handler given that report.
-/// Each test sends to a number of its own, and the emulator reports at once on request.
+/// A message sent by a client whose report settings give it the report address, the emulator's report of it, and the
+/// app's handler given that report. Each test sends to a number of its own, and the emulator reports at once on request.
 /// </summary>
 public sealed class ReportsFromTheEmulatorTests(EmulatorReportApp app) : IClassFixture<EmulatorReportApp>
 {
@@ -19,7 +19,6 @@ public sealed class ReportsFromTheEmulatorTests(EmulatorReportApp app) : IClassF
             {
                 To = ["+46701740620"],
                 Text = "Din tid är bekräftad.",
-                ReportTo = [app.Client.ReportAddress],
                 Echo = JsonSerializer.SerializeToElement(new { appointment = 4711 }),
             },
             TestContext.Current.CancellationToken);
@@ -35,7 +34,7 @@ public sealed class ReportsFromTheEmulatorTests(EmulatorReportApp app) : IClassF
     public async Task A_failed_report_from_the_emulator_reaches_the_handler()
     {
         await app.Client.SendAsync(
-            new SmsMessage { To = ["+46701740621"], Text = "Din tid är bekräftad.", ReportTo = [app.Client.ReportAddress] },
+            new SmsMessage { To = ["+46701740621"], Text = "Din tid är bekräftad." },
             TestContext.Current.CancellationToken);
 
         var report = await ReportAsync("+46701740621", "failed");

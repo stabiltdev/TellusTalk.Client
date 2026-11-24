@@ -50,7 +50,10 @@ public sealed record SmsMessage
     /// <summary>When TellusTalk sends the message, or <see langword="null"/> for at once. It is sent with its offset.</summary>
     public DateTimeOffset? ScheduledSendTime { get; init; }
 
-    /// <summary>Where TellusTalk sends the message's delivery report.</summary>
+    /// <summary>
+    /// Where TellusTalk sends the message's delivery report besides the report address the client adds when the
+    /// <c>Reports</c> settings are set, such as an email address.
+    /// </summary>
     public IReadOnlyList<ReportAddress> ReportTo
     {
         get;

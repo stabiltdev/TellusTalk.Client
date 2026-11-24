@@ -23,7 +23,10 @@ public sealed class TellusTalkOptions : IValidatableObject
     [Required]
     public string Password { get; set; } = string.Empty;
 
-    /// <summary>Where TellusTalk posts delivery reports, and their secret; <see langword="null"/> for an app that takes none.</summary>
+    /// <summary>
+    /// Where TellusTalk posts delivery reports, and their secret: the client puts their address in every message, and the
+    /// report endpoint takes the reports that carry the secret. <see langword="null"/> for an app that takes none.
+    /// </summary>
     public TellusTalkReportOptions? Reports { get; set; }
 
     IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
