@@ -142,8 +142,8 @@ besides it. The secret and the address come from the same settings, so they cann
 but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and `AddTellusTalkReports` requires
 `Reports`; a wrong setting fails when the app starts. Give `Reports:Url` as https: over http the secret travels in the
 clear. Give it as the address the endpoint answers at, too: TellusTalk follows a `302` with a `GET` without the body,
-so the report is lost while TellusTalk logs it delivered. A secret is visible ASCII without spaces, since a header
-would not carry anything else back intact; `openssl rand -base64 32` makes one.
+so the report is lost, and logged delivered where the `GET` is answered `200`. A secret is visible ASCII without
+spaces, since a header would not carry anything else back intact; `openssl rand -base64 32` makes one.
 
 TellusTalk logs each report it posts as a row of its own, and where the account has a dispatch limit, such as a test
 user's, the report counts against it.
