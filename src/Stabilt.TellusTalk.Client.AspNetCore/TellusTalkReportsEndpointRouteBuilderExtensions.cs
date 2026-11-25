@@ -132,14 +132,15 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         StatusCodeHttpResult
     >> Receive(
         [FromServices] ITellusTalkReportHandler reportHandler,
-        HttpContext context)
+        HttpRequest request,
+        CancellationToken cancellationToken)
     {
         DeliveryReport? report;
         try
         {
             report = await JsonSerializer.DeserializeAsync<DeliveryReport>(
-                context.Request.Body,
-                cancellationToken: context.RequestAborted);
+                request.Body,
+                cancellationToken: cancellationToken);
         }
         catch (JsonException)
         {
@@ -157,7 +158,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
             return TypedResults.BadRequest();
         }
 
-        await reportHandler.HandleAsync(report, context.RequestAborted);
+        await reportHandler.HandleAsync(report, cancellationToken);
 
         return TypedResults.NoContent();
     }
