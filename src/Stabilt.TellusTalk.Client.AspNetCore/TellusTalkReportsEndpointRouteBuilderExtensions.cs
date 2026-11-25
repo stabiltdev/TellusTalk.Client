@@ -79,10 +79,11 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
 
         EnsureRegistered(endpoints.ServiceProvider);
 
-        // The endpoint checks the report secret itself, so an app's fallback authorization policy cannot turn TellusTalk
-        // away.
+        // An endpoint filter runs after the app's authorization, where a fallback policy would turn TellusTalk away before
+        // the secret is checked; allowing anonymous requests leaves the check to the filter alone.
         return endpoints
             .MapPost(pattern, Receive)
+            .AddEndpointFilter(RequireReportSecret)
             .Produces(StatusCodes.Status401Unauthorized)
             .AllowAnonymous();
     }
@@ -108,24 +109,31 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         return factory.Create(Options.DefaultName).Reports?.Url;
     }
 
-    private static async Task<Results<
-        NoContent,
-        BadRequest,
-        StatusCodeHttpResult,
-        UnauthorizedHttpResult
-    >> Receive(
-        [FromServices] IOptionsMonitor<TellusTalkOptions> options,
-        [FromServices] ITellusTalkReportHandler reportHandler,
-        HttpContext context)
+    private static async ValueTask<object?> RequireReportSecret(
+        EndpointFilterInvocationContext invocation,
+        EndpointFilterDelegate next)
     {
+        var context = invocation.HttpContext;
+
         // AddTellusTalkReports, which the mapping requires, validates that Reports is set whenever the options are read.
-        var reports = options.CurrentValue.Reports!;
+        var reports = context.RequestServices.GetRequiredService<IOptionsMonitor<TellusTalkOptions>>().CurrentValue.Reports!;
         if (!ReportAuthorization.IsValid(context.Request.Headers.Authorization, reports))
         {
             context.Response.Headers.WWWAuthenticate = ReportAuthorization.Scheme;
             return TypedResults.Unauthorized();
         }
 
+        return await next(invocation);
+    }
+
+    private static async Task<Results<
+        NoContent,
+        BadRequest,
+        StatusCodeHttpResult
+    >> Receive(
+        [FromServices] ITellusTalkReportHandler reportHandler,
+        HttpContext context)
+    {
         DeliveryReport? report;
         try
         {
