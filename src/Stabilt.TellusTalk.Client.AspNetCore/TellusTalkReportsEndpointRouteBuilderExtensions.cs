@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -37,13 +39,15 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
 
         if (endpoints is RouteGroupBuilder)
         {
-            throw new InvalidOperationException("MapTellusTalkReports() maps the whole path of Reports:Url, which a route group's prefix would go in front of; in a route group, give it the route.");
+            throw new InvalidOperationException(
+                "MapTellusTalkReports() maps the whole path of Reports:Url, which a route group's prefix would go in front of; in a route group, give it the route.");
         }
 
         var url = ReportUrl(endpoints.ServiceProvider);
         if (url is not { IsAbsoluteUri: true })
         {
-            throw new InvalidOperationException("MapTellusTalkReports() maps the path of Reports:Url, an absolute http or https URL; set it, or give the route.");
+            throw new InvalidOperationException(
+                "MapTellusTalkReports() maps the path of Reports:Url, an absolute http or https URL; set it, or give the route.");
         }
 
         // Routing matches the request's path decoded.
@@ -75,10 +79,12 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
 
         EnsureRegistered(endpoints.ServiceProvider);
 
-        // The endpoint checks the report secret itself, so an app's fallback authorization policy cannot turn TellusTalk
-        // away.
+        // An endpoint filter runs after the app's authorization, where a fallback policy would turn TellusTalk away before
+        // the secret is checked; allowing anonymous requests leaves the check to the filter alone.
         return endpoints
-            .MapPost(pattern, ReceiveAsync)
+            .MapPost(pattern, Receive)
+            .AddEndpointFilter(RequireReportSecret)
+            .Produces(StatusCodes.Status401Unauthorized)
             .AllowAnonymous();
     }
 
@@ -87,7 +93,8 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         var registered = services.GetRequiredService<IServiceProviderIsService>();
         if (!registered.IsService(typeof(TellusTalkReportsMarker)) || !registered.IsService(typeof(TellusTalkClient)))
         {
-            throw new InvalidOperationException("MapTellusTalkReports needs AddTellusTalkReports and AddTellusTalkClient in the app's services.");
+            throw new InvalidOperationException(
+                "MapTellusTalkReports needs AddTellusTalkReports and AddTellusTalkClient in the app's services.");
         }
     }
 
@@ -102,47 +109,57 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         return factory.Create(Options.DefaultName).Reports?.Url;
     }
 
-    private static async Task ReceiveAsync(HttpContext context)
+    private static async ValueTask<object?> RequireReportSecret(
+        EndpointFilterInvocationContext invocation,
+        EndpointFilterDelegate next)
     {
+        var context = invocation.HttpContext;
+
         // AddTellusTalkReports, which the mapping requires, validates that Reports is set whenever the options are read.
         var reports = context.RequestServices.GetRequiredService<IOptionsMonitor<TellusTalkOptions>>().CurrentValue.Reports!;
         if (!ReportAuthorization.IsValid(context.Request.Headers.Authorization, reports))
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.Headers.WWWAuthenticate = ReportAuthorization.Scheme;
-            return;
+            return TypedResults.Unauthorized();
         }
 
+        return await next(invocation);
+    }
+
+    private static async Task<Results<
+        NoContent,
+        BadRequest,
+        StatusCodeHttpResult
+    >> Receive(
+        [FromServices] ITellusTalkReportHandler reportHandler,
+        HttpRequest request,
+        CancellationToken cancellationToken)
+    {
         DeliveryReport? report;
         try
         {
-            report = await JsonSerializer
-                .DeserializeAsync<DeliveryReport>(context.Request.Body, cancellationToken: context.RequestAborted)
-                .ConfigureAwait(false);
+            report = await JsonSerializer.DeserializeAsync<DeliveryReport>(
+                request.Body,
+                cancellationToken: cancellationToken);
         }
         catch (JsonException)
         {
-            report = null;
+            return TypedResults.BadRequest();
         }
         catch (BadHttpRequestException exception)
         {
             // The server refused the body, such as one over its size limit. Left to the app's error handling, that would
             // be logged as the app's failure and answered 500.
-            context.Response.StatusCode = exception.StatusCode;
-            return;
+            return TypedResults.StatusCode(exception.StatusCode);
         }
 
         if (report is null)
         {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            return;
+            return TypedResults.BadRequest();
         }
 
-        await context.RequestServices
-            .GetRequiredService<ITellusTalkReportHandler>()
-            .HandleAsync(report, context.RequestAborted)
-            .ConfigureAwait(false);
+        await reportHandler.HandleAsync(report, cancellationToken);
 
-        context.Response.StatusCode = StatusCodes.Status204NoContent;
+        return TypedResults.NoContent();
     }
 }
