@@ -18,13 +18,14 @@ namespace Stabilt.TellusTalk.Client.AspNetCore.Tests;
 public sealed class ReportEndpointTests
 {
     [Fact]
-    public async Task A_report_with_the_secret_reaches_the_handler_and_is_answered_no_content()
+    public async Task A_report_with_the_secret_reaches_the_handler_and_is_answered_ok_without_a_body()
     {
         await using var app = await ReportApp.StartAsync<RecordingReportHandler>();
 
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).Should().BeEmpty();
         Received(app).Should().ContainSingle().Which.To.Should().Be("+46701740605");
     }
 
@@ -54,7 +55,7 @@ public sealed class ReportEndpointTests
     }
 
     [Fact]
-    public async Task The_endpoint_describes_its_answers_204_400_and_401()
+    public async Task The_endpoint_describes_its_answers_200_400_and_401()
     {
         await using var app = Unstarted(ReportApp.Settings);
         app.MapTellusTalkReports("/sms/reports");
@@ -66,7 +67,7 @@ public sealed class ReportEndpointTests
             .GetOrderedMetadata<IProducesResponseTypeMetadata>()
             .Select(produces => produces.StatusCode);
 
-        answers.Should().BeEquivalentTo([204, 400, 401]);
+        answers.Should().BeEquivalentTo([200, 400, 401]);
     }
 
     [Fact]
@@ -87,7 +88,7 @@ public sealed class ReportEndpointTests
 
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, "Report 0ld");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Received(app).Should().ContainSingle();
     }
 
@@ -102,7 +103,7 @@ public sealed class ReportEndpointTests
         var rotated = await ReportApp.PostAsync(app, ReportBodies.Delivered, "Report rotated");
         var replaced = await ReportApp.PostAsync(app, ReportBodies.Delivered, "Report s3cret");
 
-        rotated.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        rotated.StatusCode.Should().Be(HttpStatusCode.OK);
         replaced.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
@@ -160,7 +161,7 @@ public sealed class ReportEndpointTests
             app,
             ReportBodies.Delivered.Replace("txtDELIVERED", "txtQUEUED", StringComparison.Ordinal));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Received(app).Should().ContainSingle().Which.Status.Should().Be(DeliveryStatus.Unknown);
     }
 
@@ -201,7 +202,7 @@ public sealed class ReportEndpointTests
 
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -212,7 +213,7 @@ public sealed class ReportEndpointTests
 
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, path: "/integrations/sms/reports");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -223,7 +224,7 @@ public sealed class ReportEndpointTests
 
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, path: "/hooks/tellustalk");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -234,7 +235,7 @@ public sealed class ReportEndpointTests
 
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -245,7 +246,7 @@ public sealed class ReportEndpointTests
 
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, path: "/internal/reports");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

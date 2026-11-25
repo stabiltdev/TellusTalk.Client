@@ -7,9 +7,9 @@ namespace Stabilt.TellusTalk.Client.AspNetCore;
 public interface ITellusTalkReportHandler
 {
     /// <summary>
-    /// Handles <paramref name="report"/>; the endpoint answers <c>204</c> when it returns. It should hand the report on
-    /// quickly, such as to a queue, and take the same report twice without harm: whether TellusTalk sends a report again
-    /// after a failed answer is not known.
+    /// Handles <paramref name="report"/>; the endpoint answers <c>200</c> when it returns. TellusTalk posts a report once,
+    /// so a report is lost when this throws: it should hand the report on quickly, such as to a queue, before doing
+    /// anything that can fail.
     /// </summary>
     Task HandleAsync(DeliveryReport report, CancellationToken cancellationToken);
 }
