@@ -83,6 +83,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
         // away.
         return endpoints
             .MapPost(pattern, Receive)
+            .Produces(StatusCodes.Status401Unauthorized)
             .AllowAnonymous();
     }
 

@@ -4,6 +4,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Metadata;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +51,22 @@ public sealed class ReportEndpointTests
         var response = await ReportApp.PostAsync(app, ReportBodies.Delivered, "Report wrong");
 
         response.Headers.WwwAuthenticate.Should().ContainSingle().Which.Scheme.Should().Be("Report");
+    }
+
+    [Fact]
+    public async Task The_endpoint_describes_its_answers_204_400_and_401()
+    {
+        await using var app = Unstarted(ReportApp.Settings);
+        app.MapTellusTalkReports("/sms/reports");
+
+        var answers = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(source => source.Endpoints)
+            .Single()
+            .Metadata
+            .GetOrderedMetadata<IProducesResponseTypeMetadata>()
+            .Select(produces => produces.StatusCode);
+
+        answers.Should().BeEquivalentTo([204, 400, 401]);
     }
 
     [Fact]
