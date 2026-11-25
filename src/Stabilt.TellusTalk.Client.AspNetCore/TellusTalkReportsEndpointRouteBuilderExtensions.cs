@@ -57,7 +57,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     /// <summary>
     /// Maps the <c>POST</c> endpoint TellusTalk posts delivery reports to. A report without the report secret is answered
     /// <c>401</c> and a body that is not a report <c>400</c>; any other is handed to the app's
-    /// <see cref="ITellusTalkReportHandler"/> and answered <c>204</c>. A handler's exception is left to the app's error
+    /// <see cref="ITellusTalkReportHandler"/> and answered <c>200</c>. A handler's exception is left to the app's error
     /// handling.
     /// </summary>
     /// <param name="endpoints">The app, or a route group, to map the endpoint in.</param>
@@ -127,7 +127,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     }
 
     private static async Task<Results<
-        NoContent,
+        Ok,
         BadRequest,
         StatusCodeHttpResult
     >> Receive(
@@ -160,6 +160,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
 
         await reportHandler.HandleAsync(report, cancellationToken);
 
-        return TypedResults.NoContent();
+        // 200 is the answer TellusTalk logs as a delivered report; a 204 it logs as one that failed.
+        return TypedResults.Ok();
     }
 }

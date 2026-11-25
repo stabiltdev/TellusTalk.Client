@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by [ADR 20261125-receive-delivery-reports-at-the-reports-url-and-answer-them-200](20261125-receive-delivery-reports-at-the-reports-url-and-answer-them-200.md)
 date: 2026-11-24
 deciders: [Peter Hedberg]
 supersedes: [ADR 20261123-receive-delivery-reports-at-an-endpoint-checked-by-a-secret](20261123-receive-delivery-reports-at-an-endpoint-checked-by-a-secret.md)

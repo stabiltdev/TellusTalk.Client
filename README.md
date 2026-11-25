@@ -142,8 +142,8 @@ besides it. The secret and the address come from the same settings, so they cann
 but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and `AddTellusTalkReports` requires
 `Reports`; a wrong setting fails when the app starts. Give `Reports:Url` as https: over http the secret travels in the
 clear. Give it as the address the endpoint answers at, too: TellusTalk follows a `302` with a `GET` without the body,
-so the report is lost while TellusTalk logs it delivered. A secret is visible ASCII without spaces, since a header
-would not carry anything else back intact; `openssl rand -base64 32` makes one.
+so the report is lost, and logged delivered where the `GET` is answered `200`. A secret is visible ASCII without
+spaces, since a header would not carry anything else back intact; `openssl rand -base64 32` makes one.
 
 TellusTalk logs each report it posts as a row of its own, and where the account has a dispatch limit, such as a test
 user's, the report counts against it.
@@ -162,15 +162,15 @@ the app puts on the endpoint, or on its route group, is not applied. It answers:
 
 | Answer | When |
 |---|---|
-| `204` | The handler returned |
+| `200`, without a body | The handler returned |
 | `401` | `Authorization` is missing, of another scheme than `Report`, or carries neither the secret nor a previous one; the handler is not called |
 | `400` | The body is not JSON, or has no `log_status` |
 | The server's own, such as `413` | The server refused the body, such as one over its size limit |
 | `500` | The handler threw; the app's own error handling answers |
 
-TellusTalk posts each report once: after an answer such as `401` or `500`, or none within 60 seconds, it logs the
-report's delivery as failed and does not send it again. A report whose handler threw is lost, so a handler hands it on
-quickly, such as to a queue, before doing anything that can fail.
+TellusTalk posts each report once. `200` is the answer it logs as delivered; after an answer such as `204`, `401` or
+`500`, or none within 60 seconds, it logs the report's delivery as failed and does not send it again. A report whose
+handler threw is lost, so a handler hands it on quickly, such as to a queue, before doing anything that can fail.
 
 | `Status` | TellusTalk's `log_status` |
 |---|---|
