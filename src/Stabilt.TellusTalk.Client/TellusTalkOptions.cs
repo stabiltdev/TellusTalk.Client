@@ -43,39 +43,10 @@ public sealed class TellusTalkOptions : IValidatableObject
             yield break;
         }
 
-        if (Reports.Url is not { IsAbsoluteUri: true, Scheme: "http" or "https" })
+        // The report settings name their own members, which are this class's Reports.
+        foreach (var result in Reports.Validate(urlRequired: true))
         {
-            yield return new ValidationResult(
-                $"Reports:Url is an absolute http or https URL, such as https://app.example/sms/reports, not '{Reports.Url}'.",
-                [nameof(Reports)]);
-        }
-
-        if (string.IsNullOrWhiteSpace(Reports.Secret))
-        {
-            yield return new ValidationResult(
-                "Reports:Secret is required: TellusTalk's reports carry it, and the endpoint turns away a report without it.",
-                [nameof(Reports)]);
-        }
-        else if (!IsVisibleAscii(Reports.Secret))
-        {
-            yield return new ValidationResult(
-                "Reports:Secret is visible ASCII without spaces, such as a base64 or hex string, since TellusTalk carries it back in a header.",
-                [nameof(Reports)]);
-        }
-
-        if (Reports.PreviousSecrets.Any(string.IsNullOrWhiteSpace))
-        {
-            yield return new ValidationResult("Reports:PreviousSecrets holds an empty secret.", [nameof(Reports)]);
-        }
-        else if (!Reports.PreviousSecrets.All(IsVisibleAscii))
-        {
-            yield return new ValidationResult(
-                "Reports:PreviousSecrets holds a secret that is not visible ASCII without spaces.",
-                [nameof(Reports)]);
+            yield return new ValidationResult(result.ErrorMessage, [nameof(Reports)]);
         }
     }
-
-    // A header loses a secret's leading and trailing spaces and cannot carry a control character, and how K8 encodes a
-    // character beyond ASCII has not been seen, so such a secret would turn away every report.
-    private static bool IsVisibleAscii(string secret) => secret.All(character => character is > ' ' and < '\x7f');
 }
