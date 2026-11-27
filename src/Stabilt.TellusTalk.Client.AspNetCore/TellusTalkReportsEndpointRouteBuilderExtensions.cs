@@ -28,8 +28,8 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     /// applied, since the endpoint allows anonymous requests.
     /// </returns>
     /// <exception cref="InvalidOperationException">
-    /// The app's services lack <c>AddTellusTalkReports</c> or <c>AddTellusTalkClient</c>, <paramref name="endpoints"/> is a
-    /// route group, or <c>Reports:Url</c> is not an absolute URL.
+    /// The app's services lack <c>AddTellusTalkReports</c>, <paramref name="endpoints"/> is a route group, or
+    /// <c>Reports:Url</c> is not an absolute URL.
     /// </exception>
     public static IEndpointConventionBuilder MapTellusTalkReports(this IEndpointRouteBuilder endpoints)
     {
@@ -69,7 +69,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     /// The endpoint's builder, for a route group, rate limiting, or leaving it out of OpenAPI. An authorization policy put
     /// on it is not applied, since the endpoint allows anonymous requests.
     /// </returns>
-    /// <exception cref="InvalidOperationException">The app's services lack <c>AddTellusTalkReports</c> or <c>AddTellusTalkClient</c>.</exception>
+    /// <exception cref="InvalidOperationException">The app's services lack <c>AddTellusTalkReports</c>.</exception>
     public static IEndpointConventionBuilder MapTellusTalkReports(
         this IEndpointRouteBuilder endpoints,
         [StringSyntax("Route")] string pattern)
@@ -91,10 +91,9 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     private static void EnsureRegistered(IServiceProvider services)
     {
         var registered = services.GetRequiredService<IServiceProviderIsService>();
-        if (!registered.IsService(typeof(TellusTalkReportsMarker)) || !registered.IsService(typeof(TellusTalkClient)))
+        if (!registered.IsService(typeof(TellusTalkReportsMarker)))
         {
-            throw new InvalidOperationException(
-                "MapTellusTalkReports needs AddTellusTalkReports and AddTellusTalkClient in the app's services.");
+            throw new InvalidOperationException("MapTellusTalkReports needs AddTellusTalkReports in the app's services.");
         }
     }
 
@@ -102,11 +101,11 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     // still validates the settings in full.
     private static Uri? ReportUrl(IServiceProvider services)
     {
-        var factory = new OptionsFactory<TellusTalkOptions>(
-            services.GetServices<IConfigureOptions<TellusTalkOptions>>(),
-            services.GetServices<IPostConfigureOptions<TellusTalkOptions>>());
+        var factory = new OptionsFactory<TellusTalkReportOptions>(
+            services.GetServices<IConfigureOptions<TellusTalkReportOptions>>(),
+            services.GetServices<IPostConfigureOptions<TellusTalkReportOptions>>());
 
-        return factory.Create(Options.DefaultName).Reports?.Url;
+        return factory.Create(Options.DefaultName).Url;
     }
 
     private static async ValueTask<object?> RequireReportSecret(
@@ -115,8 +114,7 @@ public static class TellusTalkReportsEndpointRouteBuilderExtensions
     {
         var context = invocation.HttpContext;
 
-        // AddTellusTalkReports, which the mapping requires, validates that Reports is set whenever the options are read.
-        var reports = context.RequestServices.GetRequiredService<IOptionsMonitor<TellusTalkOptions>>().CurrentValue.Reports!;
+        var reports = context.RequestServices.GetRequiredService<IOptionsMonitor<TellusTalkReportOptions>>().CurrentValue;
         if (!ReportAuthorization.IsValid(context.Request.Headers.Authorization, reports))
         {
             context.Response.Headers.WWWAuthenticate = ReportAuthorization.Scheme;
