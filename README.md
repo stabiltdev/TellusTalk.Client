@@ -138,14 +138,14 @@ await tellusTalk.SendAsync(
 
 When `Reports` is set, the client opens every message's `report_to` with `Reports:Url` carrying the secret as
 `Authorization: Report <secret>`, which TellusTalk sends back with each report; a message's `ReportTo` adds addresses
-besides it. The secret and the address come from the same settings, so they cannot disagree. `Reports` is optional for
-the client, but when it is there `Url`, an absolute http(s) URL, and `Secret` are required. `AddTellusTalkReports`
-reads the same `Reports` and requires only `Secret`; a `Url` there is checked when it is set, and only
-`MapTellusTalkReports()` without a route needs one. A wrong setting fails when the app starts, except, as for the
-client, while build-time OpenAPI generation runs the app. Give `Reports:Url` as https: over http the secret travels in
-the clear. Give it as the address the endpoint answers at, too: TellusTalk follows a `302` with a `GET` without the
-body, so the report is lost, and logged delivered where the `GET` is answered `200`. A secret is visible ASCII without
-spaces, since a header would not carry anything else back intact; `openssl rand -base64 32` makes one.
+besides it. `Reports` is optional for the client, but when it is there `Url`, an absolute http(s) URL, and `Secret` are
+required. `AddTellusTalkReports` reads the same `Reports` and requires only `Secret`; a `Url` there is checked when it
+is set, and only `MapTellusTalkReports()` without a route needs one. A wrong setting fails when the app starts,
+except, as for the client, while build-time OpenAPI generation runs the app. Give `Reports:Url` as https: over http the
+secret travels in the clear. Give it as the address the endpoint answers at, too: TellusTalk follows a `302` with a
+`GET` without the body, so the report is lost, and logged delivered where the `GET` is answered `200`. A secret is
+visible ASCII without spaces, since a header would not carry anything else back intact; `openssl rand -base64 32` makes
+one.
 
 `AddTellusTalkReports` reads the report settings from the section the client reads, or takes them from code:
 
@@ -157,7 +157,8 @@ spaces, since a header would not carry anything else back intact; `openssl rand 
 | `AddTellusTalkReports<SmsReportHandler>(reports => …)` | Nothing; the code sets the report settings |
 
 An app that sends and receives passes the same section to both calls, so one `Secret` serves both; from code, it gives
-the secret to both.
+the secret to both. Where the secret is given twice, from code or in two apps, the receiving side's `Secret` has to be
+the one the sending side sends: a report with another is answered `401`, and TellusTalk does not post it again.
 
 An app that receives the reports of messages another app sends needs the secret alone, and gives the route, since it
 has no `Reports:Url` to take the path from:

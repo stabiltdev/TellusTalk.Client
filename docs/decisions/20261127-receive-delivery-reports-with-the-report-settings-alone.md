@@ -81,8 +81,9 @@ ones. An error is answered rather than `200` regardless, so a lost report shows 
   receives them needs the secret and its route alone, and K8's log tells a report taken from one lost.
 - **Bad:** one more package to keep, released with the main one at one version. The secret is stored in each message's
   `report_to` at TellusTalk, and travels in the clear to a `Reports:Url` that is plain http.
-- **Bad:** an app that sends and receives from code gives the secret to both calls. With two apps, a rotation reaches
-  the receiving app first, as it reaches every instance that takes reports first.
+- **Bad:** an app that sends and receives from code gives the secret to both calls, and two apps hold it each, so a
+  secret that differs between the sending and the receiving side turns every report away. With two apps, a rotation
+  reaches the receiving app first, as it reaches every instance that takes reports first.
 - **Bad:** behind a proxy that rewrites paths, under `UsePathBase` or in a route group the route is given besides the
   URL. The path is read when the endpoint is mapped, so a changed path needs a restart, and `Reports:Url` has to be
   readable wherever the app maps its endpoints without a route, build-time OpenAPI generation included. A message cannot
