@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using DotNet.Testcontainers.Configurations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +16,14 @@ namespace Stabilt.TellusTalk.Client.AspNetCore.Tests.Emulator;
 /// </summary>
 public sealed class EmulatorReportApp : IAsyncLifetime
 {
+    // ASP.NET Core gives a request an activity only when something listens or logs, and the tests read the trace a
+    // report's request ran in.
+    private readonly ActivityListener _listener = new()
+    {
+        ShouldListenTo = source => string.Equals(source.Name, "Microsoft.AspNetCore", StringComparison.Ordinal),
+        Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+    };
+
     private WebApplication? _app;
     private TellusTalkEmulatorContainer? _container;
 
@@ -30,6 +39,8 @@ public sealed class EmulatorReportApp : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        ActivitySource.AddActivityListener(_listener);
+
         // The app checks its settings when it starts, before its port is known, so it starts with a stand-in report URL.
         // The endpoint is mapped at the stand-in's path, which the URL set once the port is known keeps.
         var builder = WebApplication.CreateSlimBuilder();
@@ -82,5 +93,7 @@ public sealed class EmulatorReportApp : IAsyncLifetime
         {
             await _container.DisposeAsync();
         }
+
+        _listener.Dispose();
     }
 }
