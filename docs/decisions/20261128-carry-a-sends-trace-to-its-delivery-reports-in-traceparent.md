@@ -11,7 +11,8 @@ deciders: [Peter Hedberg]
 A delivery report reaches the app as a request of its own, possibly days after the send, in a trace of its own; joining
 the two in the logs takes the app logging `JobUuid` on both sides. TellusTalk's K8 stores each report address with its
 message and puts every header of a URL address's settings on the report's request, as written, so a value the client
-writes into the address comes back on the report.
+writes into the address comes back on the report. A probe of K8 on 2026-11-28 showed a `traceparent` in the settings
+arriving on the report as written, and no trace context on a report whose address named none.
 
 ## Considered Options
 
@@ -49,5 +50,3 @@ carry intact. A way to turn it off can be added later without breaking an app.
   created only for logging is not, a parent-based sampler in the receiver, OpenTelemetry's default, drops the report's
   span, where a request without `traceparent` would be sampled as a root of its own; the logs still carry the trace
   id. A receiver that wants those spans has its sampler record requests whose remote parent was not recorded.
-- **Follow-up:** a send to K8 confirms that `traceparent` arrives as written: K8's sender would set one of its own if K8
-  had tracing instrumentation.
