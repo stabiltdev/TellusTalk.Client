@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -16,7 +17,9 @@ public sealed class TellusTalkClient(HttpClient httpClient, IOptionsMonitor<Tell
     /// <summary>
     /// Sends <paramref name="message"/>; the client adds no retries, since a send that failed in transit may have gone
     /// through. When the <c>Reports</c> settings are set, the message's <c>report_to</c> opens with their report address,
-    /// read from the current settings so a rotated secret reaches the next message.
+    /// read from the current settings so a rotated secret reaches the next message. Sent within an activity in W3C
+    /// format, the report address also carries the activity's id as <c>traceparent</c>, so the report's request joins
+    /// the send's trace.
     /// </summary>
     /// <exception cref="TellusTalkException">TellusTalk refused the message, or did not answer as a send is answered.</exception>
     public async Task<SendResult> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
@@ -47,11 +50,27 @@ public sealed class TellusTalkClient(HttpClient httpClient, IOptionsMonitor<Tell
         return Read(response.StatusCode, text);
     }
 
-    private static ReportAddress? ReportAddressOf(TellusTalkReportOptions? reports) => reports is null
-        ? null
-        : ReportAddress.Url(
-            reports.Url!,
-            new Dictionary<string, string>(StringComparer.Ordinal) { ["Authorization"] = ReportAuthorization.HeaderValue(reports.Secret) });
+    private static ReportAddress? ReportAddressOf(TellusTalkReportOptions? reports)
+    {
+        if (reports is null)
+        {
+            return null;
+        }
+
+        var headers = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Authorization"] = ReportAuthorization.HeaderValue(reports.Secret),
+        };
+
+        // The id itself rather than DistributedContextPropagator, which writes baggage too: K8 stores the address with
+        // the message, and baggage is the app's data.
+        if (Activity.Current is { IdFormat: ActivityIdFormat.W3C } activity)
+        {
+            headers["traceparent"] = activity.Id!;
+        }
+
+        return ReportAddress.Url(reports.Url!, headers);
+    }
 
     private static SendResult Read(HttpStatusCode statusCode, string text)
     {

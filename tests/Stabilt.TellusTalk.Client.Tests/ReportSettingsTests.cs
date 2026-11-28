@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -79,6 +80,87 @@ public sealed class ReportSettingsTests
         await client.SendAsync(Message, TestContext.Current.CancellationToken);
 
         Field(handler, "report_to").Should().Contain("Report rotated");
+    }
+
+    [Theory]
+    [InlineData(ActivityTraceFlags.Recorded, "01")]
+    [InlineData(ActivityTraceFlags.None, "00")]
+    public async Task A_message_sent_within_an_activity_carries_its_trace_parent_to_the_report(ActivityTraceFlags flags, string sampled)
+    {
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, Clients.WithReports());
+        var client = services.GetRequiredService<TellusTalkClient>();
+        using var activity = new Activity("send");
+        activity.ActivityTraceFlags = flags;
+        activity.Start();
+
+        await client.SendAsync(Message, TestContext.Current.CancellationToken);
+
+        Field(handler, "report_to").Should().Be(
+            $$$"""["https:{\"headers\":{\"Authorization\":\"Report s3cret\",\"traceparent\":\"00-{{{activity.TraceId}}}-{{{activity.SpanId}}}-{{{sampled}}}\"}}://app.invalid/sms/reports"]""");
+    }
+
+    [Fact]
+    public async Task A_message_sent_outside_any_activity_carries_the_secret_alone()
+    {
+        Activity.Current = null;
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, Clients.WithReports());
+        var client = services.GetRequiredService<TellusTalkClient>();
+
+        await client.SendAsync(Message, TestContext.Current.CancellationToken);
+
+        Field(handler, "report_to").Should().Be(
+            """["https:{\"headers\":{\"Authorization\":\"Report s3cret\"}}://app.invalid/sms/reports"]""");
+    }
+
+    [Fact]
+    public async Task A_message_sent_within_a_hierarchical_activity_carries_the_secret_alone()
+    {
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, Clients.WithReports());
+        var client = services.GetRequiredService<TellusTalkClient>();
+        using var activity = new Activity("send");
+        activity.SetIdFormat(ActivityIdFormat.Hierarchical);
+        activity.Start();
+
+        await client.SendAsync(Message, TestContext.Current.CancellationToken);
+
+        Field(handler, "report_to").Should().Be(
+            """["https:{\"headers\":{\"Authorization\":\"Report s3cret\"}}://app.invalid/sms/reports"]""");
+    }
+
+    [Fact]
+    public async Task The_messages_own_report_addresses_carry_no_trace_parent()
+    {
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler, Clients.WithReports());
+        var client = services.GetRequiredService<TellusTalkClient>();
+        using var activity = new Activity("send");
+        activity.Start();
+
+        await client.SendAsync(
+            Message with { ReportTo = [ReportAddress.Url(new Uri("https://other.invalid/reports"))] },
+            TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(handler.Body!);
+        body.RootElement.GetProperty("report_to")[1].GetString().Should().Be("https://other.invalid/reports");
+    }
+
+    [Fact]
+    public async Task Without_report_settings_a_message_sent_within_an_activity_carries_only_its_own_report_addresses()
+    {
+        using var handler = new RecordingHandler();
+        await using var services = Clients.Services(handler);
+        var client = services.GetRequiredService<TellusTalkClient>();
+        using var activity = new Activity("send");
+        activity.Start();
+
+        await client.SendAsync(
+            Message with { ReportTo = [ReportAddress.Email("reports@app.invalid")] },
+            TestContext.Current.CancellationToken);
+
+        Field(handler, "report_to").Should().Be("""["email:reports@app.invalid"]""");
     }
 
     [Theory]

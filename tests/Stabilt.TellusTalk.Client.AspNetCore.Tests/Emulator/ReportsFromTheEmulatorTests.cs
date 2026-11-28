@@ -43,6 +43,32 @@ public sealed class ReportsFromTheEmulatorTests(EmulatorReportApp app) : IClassF
         report.FailedReason.Should().Be("txtFAILED_REASON: txtOPERATOR_ROUTING_ERROR, None");
     }
 
+    [Fact]
+    public async Task A_report_from_the_emulator_runs_in_the_trace_of_its_send()
+    {
+        using var send = new Activity("send");
+        send.Start();
+        await app.Client.SendAsync(
+            new SmsMessage { To = ["+46701740622"], Text = "Din tid är bekräftad." },
+            TestContext.Current.CancellationToken);
+        send.Stop();
+
+        // The emulator passes on the trace of the call that has it post the report; that call runs in a trace of its
+        // own, so the send's trace reaches the handler only through the report address.
+        using (var report = new Activity("report"))
+        {
+            report.Start();
+            await ReportAsync("+46701740622", "delivered");
+        }
+
+        var request = app.Received.Requests
+            .Single(received => string.Equals(received.Report.To, "+46701740622", StringComparison.Ordinal))
+            .Request;
+        request.Should().NotBeNull();
+        request!.TraceId.Should().Be(send.TraceId);
+        request.ParentSpanId.Should().Be(send.SpanId);
+    }
+
     /// <summary>
     /// Has the emulator report the message to <paramref name="to"/> with <paramref name="status"/>, and waits for the
     /// handler to be given it; a report that never comes fails with the emulator's attempts, which say whether it reached
