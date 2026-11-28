@@ -112,7 +112,7 @@ dotnet add package Stabilt.TellusTalk.Client.AspNetCore
 
 ```csharp
 builder.Services.AddTellusTalkClient(builder.Configuration);
-builder.Services.AddTellusTalkReports<SmsReportHandler>();
+builder.Services.AddTellusTalkReports<SmsReportHandler>(builder.Configuration);
 
 app.MapTellusTalkReports();
 ```
@@ -138,12 +138,46 @@ await tellusTalk.SendAsync(
 
 When `Reports` is set, the client opens every message's `report_to` with `Reports:Url` carrying the secret as
 `Authorization: Report <secret>`, which TellusTalk sends back with each report; a message's `ReportTo` adds addresses
-besides it. The secret and the address come from the same settings, so they cannot disagree. `Reports` is optional,
-but when it is there `Url`, an absolute http(s) URL, and `Secret` are required, and `AddTellusTalkReports` requires
-`Reports`; a wrong setting fails when the app starts. Give `Reports:Url` as https: over http the secret travels in the
-clear. Give it as the address the endpoint answers at, too: TellusTalk follows a `302` with a `GET` without the body,
-so the report is lost, and logged delivered where the `GET` is answered `200`. A secret is visible ASCII without
-spaces, since a header would not carry anything else back intact; `openssl rand -base64 32` makes one.
+besides it. `Reports` is optional for the client, but when it is there `Url`, an absolute http(s) URL, and `Secret` are
+required. `AddTellusTalkReports` reads the same `Reports` and requires only `Secret`; a `Url` there is checked when it
+is set, and only `MapTellusTalkReports()` without a route needs one. A wrong setting fails when the app starts,
+except, as for the client, while build-time OpenAPI generation runs the app. Give `Reports:Url` as https: over http the
+secret travels in the clear. Give it as the address the endpoint answers at, too: TellusTalk follows a `302` with a
+`GET` without the body, so the report is lost, and logged delivered where the `GET` is answered `200`. A secret is
+visible ASCII without spaces, since a header would not carry anything else back intact; `openssl rand -base64 32` makes
+one.
+
+`AddTellusTalkReports` reads the report settings from the section the client reads, or takes them from code:
+
+| Call | Reads |
+|---|---|
+| `AddTellusTalkReports<SmsReportHandler>(builder.Configuration)` | `TellusTalk:Reports` |
+| `AddTellusTalkReports<SmsReportHandler>(builder.Configuration, "Sms")` | `Sms:Reports`, in a section of the app's own name |
+| `AddTellusTalkReports<SmsReportHandler>(builder.Configuration.GetSection("Sms"))` | The `Reports` of the section passed: the section the client takes, not its `Reports` |
+| `AddTellusTalkReports<SmsReportHandler>(reports => …)` | Nothing; the code sets the report settings |
+
+An app that sends and receives passes the same section to both calls, so one `Secret` serves both; from code, it gives
+the secret to both. Where the secret is given twice, from code or in two apps, the receiving side's `Secret` has to be
+the one the sending side sends: a report with another is answered `401`, and TellusTalk does not post it again.
+
+An app that receives the reports of messages another app sends needs the secret alone, and gives the route, since it
+has no `Reports:Url` to take the path from:
+
+```json
+{
+  "TellusTalk": {
+    "Reports": {
+      "Secret": "…"
+    }
+  }
+}
+```
+
+```csharp
+builder.Services.AddTellusTalkReports<SmsReportHandler>(builder.Configuration);
+
+app.MapTellusTalkReports("/sms/reports");
+```
 
 TellusTalk logs each report it posts as a row of its own, and where the account has a dispatch limit, such as a test
 user's, the report counts against it.
@@ -185,10 +219,10 @@ A report leaves out the message's text: the app has it already.
 
 To rotate the secret, set the new one as `Secret` and move the old one to `PreviousSecrets`
 (`"PreviousSecrets": ["…"]`). A report carries the secret its message was sent with, possibly days later, so keep the
-old one listed until those reports have come. Where several instances of the app take reports, first list the new
-secret in `PreviousSecrets` on all of them, and only then make it `Secret`: an instance that does not know the new
-secret yet turns away the reports of messages another instance sent with it. A changed secret takes effect without a
-restart.
+old one listed until those reports have come. Where reports are taken by several instances, or by another app than the
+one that sends, first list the new secret in `PreviousSecrets` wherever reports are taken, and only then make it
+`Secret` everywhere, with the old one in `PreviousSecrets`: wherever the new secret is not known yet, the reports of
+messages sent with it are turned away. A changed secret takes effect without a restart.
 
 An app without ASP.NET Core sets `Reports` too, so the client puts the report address in its messages. It reads a
 report with `JsonSerializer.Deserialize<DeliveryReport>(body)` and checks the request's `Authorization` with

@@ -131,8 +131,7 @@ public sealed class ReportEndpointTests
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 100);
         builder.Configuration.AddInMemoryCollection(ReportApp.Settings);
-        builder.Services.AddTellusTalkClient(builder.Configuration);
-        builder.Services.AddTellusTalkReports<RecordingReportHandler>();
+        builder.Services.AddTellusTalkReports<RecordingReportHandler>(builder.Configuration);
         builder.Services.AddSingleton<ReceivedReports>();
         await using var app = builder.Build();
         app.UseExceptionHandler(errors => errors.Run(_ => Task.CompletedTask));
@@ -264,7 +263,7 @@ public sealed class ReportEndpointTests
     [InlineData("/sms/reports", "s3cret")]
     public async Task Mapping_the_endpoint_without_a_route_and_without_an_absolute_report_url_is_refused(string? url, string? secret)
     {
-        var settings = new Dictionary<string, string?>(ReportApp.Credentials, StringComparer.Ordinal);
+        var settings = new Dictionary<string, string?>(StringComparer.Ordinal);
         if (url is not null)
         {
             settings["TellusTalk:Reports:Url"] = url;
@@ -285,7 +284,7 @@ public sealed class ReportEndpointTests
     [Fact]
     public async Task Mapping_the_endpoint_without_a_route_reads_the_report_url_without_validating_the_other_settings()
     {
-        // Build-time OpenAPI generation runs the app without its credentials and secret.
+        // Build-time OpenAPI generation runs the app without its secret.
         await using var app = Unstarted(new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["TellusTalk:Reports:Url"] = "https://app.invalid/sms/reports",
@@ -315,8 +314,6 @@ public sealed class ReportEndpointTests
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseTestServer();
-        builder.Configuration.AddInMemoryCollection(ReportApp.Credentials);
-        builder.Services.AddTellusTalkClient(builder.Configuration);
         builder.Services.AddScoped<ITellusTalkReportHandler, RecordingReportHandler>();
         await using var app = builder.Build();
 
@@ -329,11 +326,7 @@ public sealed class ReportEndpointTests
     public Task The_reports_registration_without_report_settings_fails_when_the_app_starts()
     {
         var start = () => ReportApp.StartAsync<RecordingReportHandler>(
-            configure: builder =>
-            {
-                builder.Configuration.Sources.Clear();
-                builder.Configuration.AddInMemoryCollection(ReportApp.Credentials);
-            },
+            configure: builder => builder.Configuration.Sources.Clear(),
             map: web => web.MapTellusTalkReports("/sms/reports"));
 
         return start.Should().ThrowAsync<OptionsValidationException>().WithMessage("*Reports*");
@@ -345,14 +338,13 @@ public sealed class ReportEndpointTests
     private static Action<WebApplicationBuilder> WithReportUrl(string url) => builder => builder.Configuration.AddInMemoryCollection(
         new Dictionary<string, string?>(StringComparer.Ordinal) { ["TellusTalk:Reports:Url"] = url });
 
-    /// <summary>An app built, not started, with the client and its reports registered from <paramref name="settings"/>.</summary>
+    /// <summary>An app built, not started, with its reports registered from <paramref name="settings"/>.</summary>
     private static WebApplication Unstarted(IReadOnlyDictionary<string, string?> settings)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseTestServer();
         builder.Configuration.AddInMemoryCollection(settings);
-        builder.Services.AddTellusTalkClient(builder.Configuration);
-        builder.Services.AddTellusTalkReports<RecordingReportHandler>();
+        builder.Services.AddTellusTalkReports<RecordingReportHandler>(builder.Configuration);
 
         return builder.Build();
     }

@@ -42,7 +42,7 @@ public sealed class EmulatorReportApp : IAsyncLifetime
             ["TellusTalk:Reports:Secret"] = "s3cret",
         });
         builder.Services.AddTellusTalkClient(builder.Configuration);
-        builder.Services.AddTellusTalkReports<RecordingReportHandler>();
+        builder.Services.AddTellusTalkReports<RecordingReportHandler>(builder.Configuration);
         builder.Services.AddSingleton<ReceivedReports>();
 
         _app = builder.Build();

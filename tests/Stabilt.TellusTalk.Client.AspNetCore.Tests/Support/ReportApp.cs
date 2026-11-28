@@ -7,16 +7,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Stabilt.TellusTalk.Client.AspNetCore.Tests.Support;
 
-/// <summary>An app on <see cref="TestServer"/> with the client and its reports registered as an app registers them.</summary>
+/// <summary>
+/// An app on <see cref="TestServer"/> that receives reports, without the client, registered as an app registers them.
+/// </summary>
 internal static class ReportApp
 {
-    public static readonly IReadOnlyDictionary<string, string?> Credentials = new Dictionary<string, string?>(StringComparer.Ordinal)
-    {
-        ["TellusTalk:UserName"] = "tester",
-        ["TellusTalk:Password"] = "secret",
-    };
-
-    public static readonly IReadOnlyDictionary<string, string?> Settings = new Dictionary<string, string?>(Credentials, StringComparer.Ordinal)
+    public static readonly IReadOnlyDictionary<string, string?> Settings = new Dictionary<string, string?>(StringComparer.Ordinal)
     {
         ["TellusTalk:Reports:Url"] = "https://app.invalid/sms/reports",
         ["TellusTalk:Reports:Secret"] = "s3cret",
@@ -35,8 +31,7 @@ internal static class ReportApp
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseTestServer();
         builder.Configuration.AddInMemoryCollection(Settings);
-        builder.Services.AddTellusTalkClient(builder.Configuration);
-        builder.Services.AddTellusTalkReports<THandler>();
+        builder.Services.AddTellusTalkReports<THandler>(builder.Configuration);
         builder.Services.AddSingleton<ReceivedReports>();
         configure?.Invoke(builder);
 
