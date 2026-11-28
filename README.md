@@ -151,7 +151,10 @@ When the send runs within an `Activity`, as a request or a traced job does, the 
 activity's id as `traceparent`, which TellusTalk sends back with the report. ASP.NET Core, or any receiver that reads
 W3C trace context, makes the report's request a child of the span the send ran in, so the handler's logs carry the
 send's `TraceId`, though the report may come days later. Only `traceparent` goes, not `tracestate` or `baggage`, since
-TellusTalk stores the address with the message. The addresses a message's `ReportTo` adds are sent as they are.
+TellusTalk stores the address with the message. The addresses a message's `ReportTo` adds are sent as they are. The
+report's request takes the send's sampling decision with it: where the send's activity was not recorded, a
+parent-based sampler in the receiver, OpenTelemetry's default, drops the report's span, though its logs still carry the
+`TraceId`.
 
 `AddTellusTalkReports` reads the report settings from the section the client reads, or takes them from code:
 

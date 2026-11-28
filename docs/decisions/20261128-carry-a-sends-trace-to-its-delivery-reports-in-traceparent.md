@@ -45,5 +45,9 @@ carry intact. A way to turn it off can be added later without breaking an app.
 - **Bad:** a trace spans the days a report can take, and a collector's tail sampling has decided before the report
   comes. The parent is the app's span current at the send, not the HTTP call to K8, which `HttpClient` creates later.
   An app cannot turn it off, and one that upgrades sees its report requests join the trace of their send.
+- **Bad:** the report's request takes the send's sampled flag. Where the send's activity was not recorded, as one
+  created only for logging is not, a parent-based sampler in the receiver, OpenTelemetry's default, drops the report's
+  span, where a request without `traceparent` would be sampled as a root of its own; the logs still carry the trace
+  id. A receiver that wants those spans has its sampler record requests whose remote parent was not recorded.
 - **Follow-up:** a send to K8 confirms that `traceparent` arrives as written: K8's sender would set one of its own if K8
   had tracing instrumentation.
