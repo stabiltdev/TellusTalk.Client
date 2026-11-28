@@ -53,8 +53,8 @@ public sealed class ReportsFromTheEmulatorTests(EmulatorReportApp app) : IClassF
             TestContext.Current.CancellationToken);
         send.Stop();
 
-        // The emulator passes on the trace of the call that has it post the report; that call runs in a trace of its
-        // own, so the send's trace reaches the handler only through the report address.
+        // The call that has the emulator post the report runs in a trace of its own, so the send's trace cannot reach
+        // the handler by way of that call, only through the report address.
         using (var report = new Activity("report"))
         {
             report.Start();
